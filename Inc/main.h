@@ -49,8 +49,6 @@
 
 /* Private define ------------------------------------------------------------*/
 
-#define NSS2_Pin GPIO_PIN_12
-#define NSS2_GPIO_Port GPIOB
 #define LED_R_Pin GPIO_PIN_6
 #define LED_R_GPIO_Port GPIOC
 
