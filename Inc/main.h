@@ -51,6 +51,8 @@
 
 #define LED_R_Pin GPIO_PIN_6
 #define LED_R_GPIO_Port GPIOC
+#define NSS1_Pin GPIO_PIN_2
+#define NSS1_GPIO_Port GPIOD
 
 /* ########################## Assert Selection ############################## */
 /**

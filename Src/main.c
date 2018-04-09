@@ -68,6 +68,7 @@ ADC_ChannelConfTypeDef adcChannel;
 typedef struct{
 	uint8_t address;
 	uint8_t data;
+	uint8_t rx_buff;
 }SPI_Struct;
 SPI_Struct RPi_SPI;
 /* USER CODE END PV */
@@ -105,6 +106,24 @@ int ReadAnalogADC1( uint32_t ch );
 {
 
 }*/
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+	HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+}
+
+void HAL_SYSTICK_Callback(void){
+	  if(HAL_GetTick()%100==0){
+		  //HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+
+		  //SEND DATA OVER SPI TO RPi
+		  	HAL_GPIO_WritePin(NSS1_GPIO_Port, NSS1_Pin, GPIO_PIN_RESET);
+		  	RPi_SPI.address = 0x20;
+		  	HAL_SPI_TransmitReceive(&hspi1, &RPi_SPI.address, &RPi_SPI.data, sizeof(RPi_SPI.data), 0x1000);
+		  	HAL_GPIO_WritePin(NSS1_GPIO_Port, NSS1_Pin, GPIO_PIN_SET);
+
+
+	  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -131,7 +150,6 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  initADC();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -148,6 +166,8 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  initADC();
+  HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -501,16 +521,16 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct;
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(NSS1_GPIO_Port, NSS1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : LED_R_Pin */
   GPIO_InitStruct.Pin = LED_R_Pin;
@@ -518,11 +538,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_R_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PD2 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  /*Configure GPIO pin : NSS1_Pin */
+  GPIO_InitStruct.Pin = NSS1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+  HAL_GPIO_Init(NSS1_GPIO_Port, &GPIO_InitStruct);
 
 }
 
@@ -566,19 +586,7 @@ int ReadAnalogADC1( uint32_t ch ){
 }
 
 
-void HAL_SYSTICK_Callback(void){
-	  if(HAL_GetTick()%100==0){
-		  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 
-		  //SEND DATA OVER SPI TO RPi
-		  	//HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_RESET);
-		  	//RPi_SPI.address = 0x20;
-		  	//HAL_SPI_TransmitReceive(&hspi2, &RPi_SPI.address, &RPi_SPI.data, sizeof(RPi_SPI.data), 0x1000);
-		  	//HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_SET);
-
-
-	  }
-}
 /* USER CODE END 4 */
 
 /**
