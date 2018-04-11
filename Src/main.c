@@ -66,9 +66,15 @@ UART_HandleTypeDef huart3;
 ADC_ChannelConfTypeDef adcChannel;
 
 typedef struct{
+	int rpi_3v3;
+}ADC_Struct;
+ADC_Struct adc;
+typedef struct{
 	uint8_t address;
-	uint8_t data;
-	uint8_t rx_buff;
+	uint8_t data[10];
+	uint8_t rx_buff[10];
+	uint8_t tx_buff[10];
+	char 	rxed;
 }SPI_Struct;
 SPI_Struct RPi_SPI;
 /* USER CODE END PV */
@@ -108,18 +114,50 @@ int ReadAnalogADC1( uint32_t ch );
 }*/
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-	HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+	if (hspi->Instance==SPI2){
+		//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+
+		/**/
+		//RPi_SPI.rxed =1;
+
+		//HAL_SPI_
+
+		HAL_SPI_Transmit_IT(&hspi2, &RPi_SPI.tx_buff,  3);
+	}
+}
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+	if (hspi->Instance==SPI2){
+		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+
+		//RPi_SPI.rxed =1;
+
+		//HAL_SPI_
+		HAL_SPI_Receive_IT(&hspi2, &RPi_SPI.rx_buff, 3);
+
+	}
 }
 
 void HAL_SYSTICK_Callback(void){
+
 	  if(HAL_GetTick()%100==0){
 		  //HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-
 		  //SEND DATA OVER SPI TO RPi
-		  	HAL_GPIO_WritePin(NSS1_GPIO_Port, NSS1_Pin, GPIO_PIN_RESET);
-		  	RPi_SPI.address = 0x20;
-		  	HAL_SPI_TransmitReceive(&hspi1, &RPi_SPI.address, &RPi_SPI.data, sizeof(RPi_SPI.data), 0x1000);
-		  	HAL_GPIO_WritePin(NSS1_GPIO_Port, NSS1_Pin, GPIO_PIN_SET);
+		  	/*HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_RESET);
+		  	RPi_SPI.address = 0xAA;
+		  	RPi_SPI.data[0] = 0xBA;
+
+		  	RPi_SPI.tx_buff[0] = 0xA1;
+		  	RPi_SPI.tx_buff[1] = 0xA2;
+		  	RPi_SPI.tx_buff[2] = 0xA3;
+		  	RPi_SPI.tx_buff[3] = 0xA4;
+		  	RPi_SPI.tx_buff[4] = 0xA5;
+		  	//HAL_SPI_Transmit(&hspi2,&RPi_SPI.tx_buff, 2, 5000);
+		  	//HAL_SPI_Receive(&hspi2, &RPi_SPI.rx_buff, 3,5000);
+		  	HAL_SPI_TransmitReceive(&hspi2, &RPi_SPI.tx_buff, &RPi_SPI.rx_buff, 3, 0x1000);
+		  	HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_SET);
+*/
 
 
 	  }
@@ -134,7 +172,6 @@ void HAL_SYSTICK_Callback(void){
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -167,7 +204,13 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   initADC();
-  HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 2);
+  HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
+  RPi_SPI.rxed = 0;
+
+  RPi_SPI.tx_buff[0] = 0x0A;
+  RPi_SPI.tx_buff[1] = 0x55;
+  RPi_SPI.tx_buff[2] = 0x0F;
+  //HAL_SPI_
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -178,7 +221,25 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	  RPi_SPI.data = ReadAnalogADC1( RPI_3V3_SENSE );
+	  adc.rpi_3v3 = ReadAnalogADC1( RPI_3V3_SENSE );
+	  RPi_SPI.tx_buff[0] = (uint8_t)(adc.rpi_3v3>>8);
+	  RPi_SPI.tx_buff[1] = (uint8_t)adc.rpi_3v3;
+
+	  if(RPi_SPI.rxed == 1){
+		  RPi_SPI.tx_buff[0] = 0x0A;
+		  RPi_SPI.tx_buff[1] = 0x55;
+		  RPi_SPI.tx_buff[2] = 0xF0;
+
+		  //HAL_SPI_Receive_IT(&hspi2, , 3);
+		  //RPi_SPI.rxed=0;
+
+		  //HAL_SPI_Transmit_IT(&hspi2, &RPi_SPI.tx_buff,  3);
+
+		  //HAL_SPI_Receive_IT(&hspi2, &RPi_SPI.rx_buff, 3);
+		  //HAL_SPI_TransmitReceive_IT(&hspi2, &RPi_SPI.tx_buff,&RPi_SPI.rx_buff, 3);
+	  }
+
+		//
   }
   /* USER CODE END 3 */
 
@@ -328,7 +389,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -352,7 +413,7 @@ static void MX_SPI2_Init(void)
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi2.Init.NSS = SPI_NSS_HARD_INPUT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
