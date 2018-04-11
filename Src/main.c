@@ -40,7 +40,7 @@
 #include "stm32f1xx_hal.h"
 
 /* USER CODE BEGIN Includes */
-
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -53,30 +53,43 @@ I2C_HandleTypeDef hi2c1;
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
-TIM_HandleTypeDef htim1;
-TIM_HandleTypeDef htim2;
-
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
-#define RPI_3V3_SENSE ADC_CHANNEL_5
+
+#define V4_SENSE		ADC_CHANNEL_4
+#define RPI_3V3_SENSE 	ADC_CHANNEL_5
+#define USB_5V_SENSE	ADC_CHANNEL_6
+#define VIN_SENSE		ADC_CHANNEL_7
+#define A14				ADC_CHANNEL_14
+#define A15				ADC_CHANNEL_15
+
 /* Private variables ---------------------------------------------------------*/
 ADC_ChannelConfTypeDef adcChannel;
 
 typedef struct{
 	int rpi_3v3;
+	int in[15];
 }ADC_Struct;
 ADC_Struct adc;
 typedef struct{
-	uint8_t address;
-	uint8_t data[10];
+	uint16_t address;
+	uint8_t data;
 	uint8_t rx_buff[10];
 	uint8_t tx_buff[10];
 	char 	rxed;
 }SPI_Struct;
 SPI_Struct RPi_SPI;
+
+//P MGS-TYPE SPARE DATA-ID  DATA-VALUE
+//0 000      0000  00000000 00000000 00000000
+typedef struct{
+	uint32_t rx;
+	uint32_t tx;
+}OT_Struct;
+OT_Struct ot;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -87,14 +100,9 @@ static void MX_CAN_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SPI2_Init(void);
-static void MX_TIM1_Init(void);
-static void MX_TIM2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART3_UART_Init(void);
-
-void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
-                                
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -104,6 +112,17 @@ void initADC(void);
 void StartAnalogADC1( uint32_t ch );
 int GetAnalogADC1( void );
 int ReadAnalogADC1( uint32_t ch );
+
+//OT
+void setIdleState(void);
+void setActiveState(void);
+void activateBoiler(void);
+void sendBit(bool high);
+void sendFrame(uint32_t request);
+void printBinary(uint32_t val);
+uint32_t sendRequest(uint32_t request);
+bool waitForResponse();
+uint32_t readResponse();
 
 /* USER CODE END PFP */
 
@@ -196,8 +215,6 @@ int main(void)
   MX_I2C1_Init();
   MX_SPI1_Init();
   MX_SPI2_Init();
-  MX_TIM1_Init();
-  MX_TIM2_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
@@ -225,7 +242,7 @@ int main(void)
 	  RPi_SPI.tx_buff[0] = (uint8_t)(adc.rpi_3v3>>8);
 	  RPi_SPI.tx_buff[1] = (uint8_t)adc.rpi_3v3;
 
-	  if(RPi_SPI.rxed == 1){
+	  /*if(RPi_SPI.rxed == 1){
 		  RPi_SPI.tx_buff[0] = 0x0A;
 		  RPi_SPI.tx_buff[1] = 0x55;
 		  RPi_SPI.tx_buff[2] = 0xF0;
@@ -237,7 +254,7 @@ int main(void)
 
 		  //HAL_SPI_Receive_IT(&hspi2, &RPi_SPI.rx_buff, 3);
 		  //HAL_SPI_TransmitReceive_IT(&hspi2, &RPi_SPI.tx_buff,&RPi_SPI.rx_buff, 3);
-	  }
+	  }*/
 
 		//
   }
@@ -413,7 +430,7 @@ static void MX_SPI2_Init(void)
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi2.Init.NSS = SPI_NSS_HARD_INPUT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -422,93 +439,6 @@ static void MX_SPI2_Init(void)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
-
-}
-
-/* TIM1 init function */
-static void MX_TIM1_Init(void)
-{
-
-  TIM_ClockConfigTypeDef sClockSourceConfig;
-  TIM_MasterConfigTypeDef sMasterConfig;
-  TIM_IC_InitTypeDef sConfigIC;
-
-  htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 0;
-  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 0;
-  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim1.Init.RepetitionCounter = 0;
-  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  if (HAL_TIM_IC_Init(&htim1) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
-  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
-  if (HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-}
-
-/* TIM2 init function */
-static void MX_TIM2_Init(void)
-{
-
-  TIM_MasterConfigTypeDef sMasterConfig;
-  TIM_OC_InitTypeDef sConfigOC;
-
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 0;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 0;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_OC_Init(&htim2) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  sConfigOC.OCMode = TIM_OCMODE_TIMING;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  HAL_TIM_MspPostInit(&htim2);
 
 }
 
@@ -591,6 +521,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(OT_TX_GPIO_Port, OT_TX_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(NSS1_GPIO_Port, NSS1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : LED_R_Pin */
@@ -598,6 +531,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_R_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : OT_TX_Pin */
+  GPIO_InitStruct.Pin = OT_TX_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(OT_TX_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : OT_RX_Pin */
+  GPIO_InitStruct.Pin = OT_RX_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(OT_RX_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : NSS1_Pin */
   GPIO_InitStruct.Pin = NSS1_Pin;
