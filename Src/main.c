@@ -74,6 +74,7 @@ typedef struct{
 	int in[15];
 }ADC_Struct;
 ADC_Struct adc;
+
 typedef struct{
 	uint16_t address;
 	uint8_t data;
@@ -82,6 +83,14 @@ typedef struct{
 	char 	rxed;
 }SPI_Struct;
 SPI_Struct RPi_SPI;
+
+typedef struct{
+	uint16_t address;
+	uint8_t data;
+	uint8_t rx_buff[8];
+	uint8_t tx_buff[8];
+}UART_Struct;
+UART_Struct RPi_UART;
 
 //P MGS-TYPE SPARE DATA-ID  DATA-VALUE
 //0 000      0000  00000000 00000000 00000000
@@ -131,17 +140,16 @@ uint32_t readResponse();
 {
 
 }*/
-void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+/*void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
 	if (hspi->Instance==SPI2){
 		//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 
-		/**/
 		//RPi_SPI.rxed =1;
 
 		//HAL_SPI_
-
-		HAL_SPI_Transmit_IT(&hspi2, &RPi_SPI.tx_buff,  3);
+		HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
+		//HAL_SPI_Transmit_IT(&hspi2, &RPi_SPI.tx_buff,  2);
 	}
 }
 
@@ -153,11 +161,20 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 		//RPi_SPI.rxed =1;
 
 		//HAL_SPI_
-		HAL_SPI_Receive_IT(&hspi2, &RPi_SPI.rx_buff, 3);
+		HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
 
 	}
-}
+}*/
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart->Instance==USART3){
+		if(RPi_UART.rx_buff[0]=='H' && RPi_UART.rx_buff[1]=='e' && RPi_UART.rx_buff[2]=='l'){
+			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+		}
+		HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,3);
+	}
+}
 void HAL_SYSTICK_Callback(void){
 
 	  if(HAL_GetTick()%100==0){
@@ -221,12 +238,13 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   initADC();
-  HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
-  RPi_SPI.rxed = 0;
+  //HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
+  HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,3);
+  /*RPi_SPI.rxed = 0;
 
   RPi_SPI.tx_buff[0] = 0x0A;
   RPi_SPI.tx_buff[1] = 0x55;
-  RPi_SPI.tx_buff[2] = 0x0F;
+  RPi_SPI.tx_buff[2] = 0x0F;*/
   //HAL_SPI_
   /* USER CODE END 2 */
 
@@ -430,7 +448,7 @@ static void MX_SPI2_Init(void)
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi2.Init.NSS = SPI_NSS_HARD_INPUT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
