@@ -66,6 +66,24 @@ UART_HandleTypeDef huart3;
 #define A14				ADC_CHANNEL_14
 #define A15				ADC_CHANNEL_15
 
+#define OW_0    0x00
+#define OW_1    0xff
+#define OW_R    0xff
+
+
+const uint8_t convert_T[] = {
+                OW_0, OW_0, OW_1, OW_1, OW_0, OW_0, OW_1, OW_1, // 0xcc SKIP ROM
+                OW_0, OW_0, OW_1, OW_0, OW_0, OW_0, OW_1, OW_0  // 0x44 CONVERT
+};
+
+const uint8_t read_scratch[] = {
+                OW_0, OW_0, OW_1, OW_1, OW_0, OW_0, OW_1, OW_1, // 0xcc SKIP ROM
+                OW_0, OW_1, OW_1, OW_1, OW_1, OW_1, OW_0, OW_1, // 0xbe READ SCRATCH
+                OW_R, OW_R, OW_R, OW_R, OW_R, OW_R, OW_R, OW_R,
+                OW_R, OW_R, OW_R, OW_R, OW_R, OW_R, OW_R, OW_R
+};
+
+uint8_t scratch[sizeof(read_scratch)];
 /* Private variables ---------------------------------------------------------*/
 ADC_ChannelConfTypeDef adcChannel;
 
@@ -132,6 +150,9 @@ void printBinary(uint32_t val);
 uint32_t sendRequest(uint32_t request);
 bool waitForResponse();
 uint32_t readResponse();
+
+// one wire
+void OWReset(void);
 
 /* USER CODE END PFP */
 
@@ -246,6 +267,8 @@ int main(void)
   RPi_SPI.tx_buff[1] = 0x55;
   RPi_SPI.tx_buff[2] = 0x0F;*/
   //HAL_SPI_
+  OWReset();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -609,6 +632,58 @@ int ReadAnalogADC1( uint32_t ch ){
 	return HAL_ADC_GetValue(&hadc1);
 }
 
+
+//1 wire
+void OWReset(void){
+	uint8_t tx = 0xf0;
+	uint8_t rx = 0;
+
+	huart2.Instance = USART2;
+	huart2.Init.BaudRate = 9600;
+	huart2.Init.WordLength = UART_WORDLENGTH_8B;
+	huart2.Init.StopBits = UART_STOPBITS_1;
+	huart2.Init.Parity = UART_PARITY_NONE;
+	huart2.Init.Mode = UART_MODE_TX_RX;
+	huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+	if (HAL_UART_Init(&huart2) != HAL_OK)
+	{
+	  _Error_Handler(__FILE__, __LINE__);
+	}
+
+	HAL_UART_Transmit(&huart2,&tx,1,5000);
+	//HAL_UART_GetState()
+	//HAL_UART_Receive(&huart2,&rx,1,5000);
+
+
+
+	//huart2.Instance = USART2;
+	huart2.Init.BaudRate = 115200;
+	/*huart2.Init.WordLength = UART_WORDLENGTH_8B;
+	huart2.Init.StopBits = UART_STOPBITS_1;
+	huart2.Init.Parity = UART_PARITY_NONE;
+	huart2.Init.Mode = UART_MODE_TX_RX;
+	huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	huart2.Init.OverSampling = UART_OVERSAMPLING_16;*/
+	if (HAL_UART_Init(&huart2) != HAL_OK)
+	{
+	  _Error_Handler(__FILE__, __LINE__);
+	}
+
+	if(rx==0xf0){
+		HAL_Delay(1000);
+	}
+	//HAL_Delay(1);
+
+	HAL_UART_Transmit(&huart2,&convert_T,16,5000);
+
+	HAL_Delay(10);
+
+	HAL_UART_Transmit(&huart2,&read_scratch,16,5000);
+	HAL_UART_Receive(&huart2,&scratch,1,5000);
+	//HAL_UART_
+	HAL_Delay(1);
+}
 
 
 /* USER CODE END 4 */

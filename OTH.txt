@@ -1,0 +1,111 @@
+Configuration	OTH
+STM32CubeMX 	4.24.0
+Date	04/15/2018
+MCU	STM32F103RBTx
+
+
+
+PERIPHERALS	MODES	FUNCTIONS	PINS
+ADC1	IN0	ADC1_IN0	PA0-WKUP
+ADC1	IN1	ADC1_IN1	PA1
+ADC1	IN4	ADC1_IN4	PA4
+ADC1	IN5	ADC1_IN5	PA5
+ADC1	IN6	ADC1_IN6	PA6
+ADC1	IN7	ADC1_IN7	PA7
+ADC1	IN8	ADC1_IN8	PB0
+ADC1	IN9	ADC1_IN9	PB1
+ADC1	IN10	ADC1_IN10	PC0
+ADC1	IN11	ADC1_IN11	PC1
+ADC1	IN12	ADC1_IN12	PC2
+ADC1	IN13	ADC1_IN13	PC3
+ADC1	IN14	ADC1_IN14	PC4
+ADC1	IN15	ADC1_IN15	PC5
+CAN	Master	CAN_RX	PB8
+CAN	Master	CAN_TX	PB9
+I2C1	I2C	I2C1_SCL	PB6
+I2C1	I2C	I2C1_SDA	PB7
+SPI1	Full-Duplex Master	SPI1_MISO	PB4
+SPI1	Full-Duplex Master	SPI1_MOSI	PB5
+SPI1	Full-Duplex Master	SPI1_SCK	PB3
+SPI2	Full-Duplex Slave	SPI2_MISO	PB14
+SPI2	Full-Duplex Slave	SPI2_MOSI	PB15
+SPI2	Full-Duplex Slave	SPI2_SCK	PB13
+SPI2	Hardware NSS Input Signal	SPI2_NSS	PB12
+SYS	Serial Wire	SYS_JTCK-SWCLK	PA14
+SYS	Serial Wire	SYS_JTMS-SWDIO	PA13
+SYS	SysTick	SYS_VS_Systick	VP_SYS_VS_Systick
+USART1	Asynchronous	USART1_RX	PA10
+USART1	Asynchronous	USART1_TX	PA9
+USART2	Asynchronous	USART2_RX	PA3
+USART2	Asynchronous	USART2_TX	PA2
+USART3	Asynchronous	USART3_RX	PB11
+USART3	Asynchronous	USART3_TX	PB10
+
+
+
+Pin Nb	PINs	FUNCTIONs	LABELs
+8	PC0	ADC1_IN10	
+9	PC1	ADC1_IN11	
+10	PC2	ADC1_IN12	
+11	PC3	ADC1_IN13	
+14	PA0-WKUP	ADC1_IN0	
+15	PA1	ADC1_IN1	
+16	PA2	USART2_TX	
+17	PA3	USART2_RX	
+20	PA4	ADC1_IN4	
+21	PA5	ADC1_IN5	
+22	PA6	ADC1_IN6	
+23	PA7	ADC1_IN7	
+24	PC4	ADC1_IN14	
+25	PC5	ADC1_IN15	
+26	PB0	ADC1_IN8	
+27	PB1	ADC1_IN9	
+29	PB10	USART3_TX	
+30	PB11	USART3_RX	
+33	PB12	SPI2_NSS	
+34	PB13	SPI2_SCK	
+35	PB14	SPI2_MISO	
+36	PB15	SPI2_MOSI	
+37	PC6	GPIO_Output	LED_R
+41	PA8	GPIO_Output	OT_TX
+42	PA9	USART1_TX	
+43	PA10	USART1_RX	
+46	PA13	SYS_JTMS-SWDIO	
+49	PA14	SYS_JTCK-SWCLK	
+50	PA15	GPIO_Input	OT_RX
+54	PD2	GPIO_Output	NSS1
+55	PB3	SPI1_SCK	
+56	PB4	SPI1_MISO	
+57	PB5	SPI1_MOSI	
+58	PB6	I2C1_SCL	
+59	PB7	I2C1_SDA	
+61	PB8	CAN_RX	
+62	PB9	CAN_TX	
+
+
+
+SOFTWARE PROJECT
+
+Project Settings : 
+Project Name : OTH
+Project Folder : D:\STM32_workspace_9.0\OTH
+Toolchain / IDE : TrueSTUDIO
+Firmware Package Name and Version : STM32Cube FW_F1 V1.6.1
+
+
+Code Generation Settings : 
+STM32Cube Firmware Library Package : Copy only the necessary library files
+Generate peripheral initialization as a pair of '.c/.h' files per peripheral : No
+Backup previously generated files when re-generating : No
+Delete previously generated files when not re-generated : Yes
+Set all free pins as analog (to optimize the power consumption) : No
+
+
+Toolchains Settings : 
+Compiler Optimizations : Balanced Size/Speed
+
+
+
+
+
+
