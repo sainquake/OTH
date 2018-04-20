@@ -53,6 +53,8 @@ I2C_HandleTypeDef hi2c1;
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
+TIM_HandleTypeDef htim4;
+
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
@@ -84,6 +86,8 @@ const uint8_t read_scratch[] = {
 };
 
 uint8_t scratch[sizeof(read_scratch)];
+
+uint32_t micros;
 /* Private variables ---------------------------------------------------------*/
 ADC_ChannelConfTypeDef adcChannel;
 
@@ -130,6 +134,7 @@ static void MX_SPI2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_TIM4_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -141,6 +146,7 @@ int GetAnalogADC1( void );
 int ReadAnalogADC1( uint32_t ch );
 
 //OT
+void initOT(void);
 void setIdleState(void);
 void setActiveState(void);
 void activateBoiler(void);
@@ -150,9 +156,9 @@ void printBinary(uint32_t val);
 uint32_t sendRequest(uint32_t request);
 bool waitForResponse();
 uint32_t readResponse();
-
+void delayMicros(uint32_t t);
 // one wire
-void OWReset(void);
+bool OWReset(void);
 
 /* USER CODE END PFP */
 
@@ -186,6 +192,13 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 
 	}
 }*/
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if (htim->Instance==TIM4) //check if the interrupt comes from TIM3
+	{
+		micros++;
+	}
+}
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -229,6 +242,11 @@ void HAL_SYSTICK_Callback(void){
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	uint8_t rx[16];
+	uint8_t i=0;
+
+	uint16_t tt=0;
+	int Temp;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -256,8 +274,11 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 
+  micros=0;
+  HAL_TIM_Base_Start_IT(&htim4);
   initADC();
   //HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
   HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,3);
@@ -267,7 +288,9 @@ int main(void)
   RPi_SPI.tx_buff[1] = 0x55;
   RPi_SPI.tx_buff[2] = 0x0F;*/
   //HAL_SPI_
-  OWReset();
+
+
+
 
   /* USER CODE END 2 */
 
@@ -279,6 +302,35 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+	  if( OWReset()){
+
+		HAL_UART_Transmit(&huart2,&convert_T,16,5000);
+
+		HAL_Delay(200);
+
+		if(OWReset() ){
+			HAL_UART_Transmit(&huart2,&read_scratch,16,5000);
+
+			for(i=0;i<16;i++){
+				huart2.Instance->DR = 0xff;
+				HAL_Delay(10);
+				rx[i] = huart2.Instance->DR;
+
+				if (rx[i] == 0xff) {
+					tt = (tt>>1) | 0x8000;
+				} else {
+					tt = tt>>1;
+				}
+			}
+			//HAL_UART_Receive(&huart2,&scratch,16,2000);
+			//HAL_UART_*/
+			HAL_Delay(1);
+			tt = tt>>4;
+		}
+	  }
+
+	  RPi_SPI.tx_buff[2] = tt;
+
 	  adc.rpi_3v3 = ReadAnalogADC1( RPI_3V3_SENSE );
 	  RPi_SPI.tx_buff[0] = (uint8_t)(adc.rpi_3v3>>8);
 	  RPi_SPI.tx_buff[1] = (uint8_t)adc.rpi_3v3;
@@ -483,6 +535,39 @@ static void MX_SPI2_Init(void)
 
 }
 
+/* TIM4 init function */
+static void MX_TIM4_Init(void)
+{
+
+  TIM_ClockConfigTypeDef sClockSourceConfig;
+  TIM_MasterConfigTypeDef sMasterConfig;
+
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 1;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 64;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /* USART1 init function */
 static void MX_USART1_UART_Init(void)
 {
@@ -562,7 +647,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(OT_TX_GPIO_Port, OT_TX_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(OT_RXO_GPIO_Port, OT_RXO_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(NSS1_GPIO_Port, NSS1_Pin, GPIO_PIN_RESET);
@@ -573,17 +658,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_R_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : OT_TX_Pin */
-  GPIO_InitStruct.Pin = OT_TX_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(OT_TX_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : OT_RX_Pin */
-  GPIO_InitStruct.Pin = OT_RX_Pin;
+  /*Configure GPIO pin : OT_TXI_Pin */
+  GPIO_InitStruct.Pin = OT_TXI_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(OT_RX_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(OT_TXI_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : OT_RXO_Pin */
+  GPIO_InitStruct.Pin = OT_RXO_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(OT_RXO_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : NSS1_Pin */
   GPIO_InitStruct.Pin = NSS1_Pin;
@@ -634,7 +719,7 @@ int ReadAnalogADC1( uint32_t ch ){
 
 
 //1 wire
-void OWReset(void){
+bool OWReset(void){
 	uint8_t tx = 0xf0;
 	uint8_t rx = 0;
 
@@ -651,40 +736,110 @@ void OWReset(void){
 	  _Error_Handler(__FILE__, __LINE__);
 	}
 
-	HAL_UART_Transmit(&huart2,&tx,1,5000);
-	//HAL_UART_GetState()
-	//HAL_UART_Receive(&huart2,&rx,1,5000);
+	huart2.Instance->DR = tx;
+	HAL_Delay(10);
+	rx = huart2.Instance->DR;
 
 
-
-	//huart2.Instance = USART2;
+	huart2.Instance = USART2;
 	huart2.Init.BaudRate = 115200;
-	/*huart2.Init.WordLength = UART_WORDLENGTH_8B;
+	huart2.Init.WordLength = UART_WORDLENGTH_8B;
 	huart2.Init.StopBits = UART_STOPBITS_1;
 	huart2.Init.Parity = UART_PARITY_NONE;
 	huart2.Init.Mode = UART_MODE_TX_RX;
 	huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-	huart2.Init.OverSampling = UART_OVERSAMPLING_16;*/
+	huart2.Init.OverSampling = UART_OVERSAMPLING_16;
 	if (HAL_UART_Init(&huart2) != HAL_OK)
 	{
 	  _Error_Handler(__FILE__, __LINE__);
 	}
 
-	if(rx==0xf0){
-		HAL_Delay(1000);
-	}
-	//HAL_Delay(1);
+	if(rx==0xf0)
+		return false;
 
-	HAL_UART_Transmit(&huart2,&convert_T,16,5000);
-
-	HAL_Delay(10);
-
-	HAL_UART_Transmit(&huart2,&read_scratch,16,5000);
-	HAL_UART_Receive(&huart2,&scratch,1,5000);
-	//HAL_UART_
-	HAL_Delay(1);
+	return true;
 }
 
+//OT
+void initOT(void){
+
+}
+void setIdleState(void){
+	HAL_GPIO_WritePin(OT_RXO_GPIO_Port, OT_RXO_Pin, GPIO_PIN_SET);
+}
+void setActiveState(void){
+	HAL_GPIO_WritePin(OT_RXO_GPIO_Port, OT_RXO_Pin, GPIO_PIN_RESET);
+}
+void activateBoiler(void){
+	setIdleState();
+	HAL_Delay(1000);
+}
+void sendBit(bool high){
+	  if (high) setActiveState(); else setIdleState();
+	  	  delayMicros(500);
+	  if (high) setIdleState(); else setActiveState();
+	  	  delayMicros(500);
+}
+void sendFrame(uint32_t request){
+	  sendBit(true); //start bit
+	  for (int i = 31; i >= 0; i--) {
+	    sendBit( (request>>i & 1) );//bitRead(request, i));
+	  }
+	  sendBit(true); //stop bit
+	  setIdleState();
+}
+void printBinary(uint32_t val);
+uint32_t sendRequest(uint32_t request){
+	sendFrame(request);
+
+	  if (!waitForResponse()) return 0;
+
+	  return readResponse();
+}
+bool waitForResponse(){
+	uint32_t time_stamp = micros;
+	  while (HAL_GPIO_ReadPin(OT_TXI_GPIO_Port,OT_TXI_Pin) != GPIO_PIN_SET) { //start bit
+	    if (micros - time_stamp >= 1000000) {
+	      //Serial.println("Response timeout");
+	      return false;
+	    }
+	  }
+	  delayMicros(1000 * 1.25); //wait for first bit
+	  return true;
+}
+uint32_t readResponse(){
+	  unsigned long response = 0;
+	  for (int i = 0; i < 32; i++) {
+	    response = (response << 1) | HAL_GPIO_ReadPin(OT_TXI_GPIO_Port,OT_TXI_Pin);// digitalRead(OT_IN_PIN);
+	    delayMicros(1000);
+	  }
+	  //Serial.print("Response: ");
+	  //printBinary(response);
+	 // Serial.print(" / ");
+	  //Serial.print(response, HEX);
+	 // Serial.println();
+
+	 /* if ((response >> 16 & 0xFF) == 25) {
+	    Serial.print("t=");
+	    Serial.print(response >> 8 & 0xFF);
+	    Serial.println("");
+	  }*/
+	  return response;
+}
+void delayMicros(uint32_t t){
+	  uint32_t tickstart = micros;
+	  uint32_t wait = t;
+
+	  /* Add a freq to guarantee minimum wait */
+	  /*if (wait < HAL_MAX_DELAY)
+	  {
+	    wait += (uint32_t)(uwTickFreq);
+	  }*/
+
+	  while ((micros - tickstart) < wait)
+	  {
+	  }
+}
 
 /* USER CODE END 4 */
 
