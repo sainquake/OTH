@@ -88,12 +88,16 @@ const uint8_t read_scratch[] = {
 uint8_t scratch[sizeof(read_scratch)];
 
 uint32_t micros;
+
+uint8_t sim_tx[10];
+uint8_t sim_rx[10];
 /* Private variables ---------------------------------------------------------*/
 ADC_ChannelConfTypeDef adcChannel;
 
 typedef struct{
 	int rpi_3v3;
-	int in[15];
+	int in[16];
+	float v[16];
 }ADC_Struct;
 ADC_Struct adc;
 
@@ -114,6 +118,13 @@ typedef struct{
 }UART_Struct;
 UART_Struct RPi_UART;
 
+//DS18B20
+typedef struct{
+	uint16_t raw;
+	bool reset;
+	float out;
+}TEMP_Struct;
+TEMP_Struct temp;
 //P MGS-TYPE SPARE DATA-ID  DATA-VALUE
 //0 000      0000  00000000 00000000 00000000
 typedef struct{
@@ -159,7 +170,8 @@ uint32_t readResponse();
 void delayMicros(uint32_t t);
 // one wire
 bool OWReset(void);
-
+void OWTransmit(void);
+void OWReceive(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -208,10 +220,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		}
 		HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,3);
 	}
+	if (huart->Instance==USART1){
+		HAL_UART_Receive_IT(&huart1,sim_rx,4);
+	}
 }
 void HAL_SYSTICK_Callback(void){
 
-	  if(HAL_GetTick()%100==0){
+	  if(HAL_GetTick()%1000==0){
 		  //HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		  //SEND DATA OVER SPI TO RPi
 		  	/*HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_RESET);
@@ -228,7 +243,6 @@ void HAL_SYSTICK_Callback(void){
 		  	HAL_SPI_TransmitReceive(&hspi2, &RPi_SPI.tx_buff, &RPi_SPI.rx_buff, 3, 0x1000);
 		  	HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_SET);
 */
-
 
 	  }
 }
@@ -282,9 +296,10 @@ int main(void)
   initADC();
   //HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
   HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,3);
+  HAL_UART_Receive_IT(&huart1,sim_rx,4);
   /*RPi_SPI.rxed = 0;
 
-  RPi_SPI.tx_buff[0] = 0x0A;
+  RPi_SPI.tx_buff[0] = 0x0A;b
   RPi_SPI.tx_buff[1] = 0x55;
   RPi_SPI.tx_buff[2] = 0x0F;*/
   //HAL_SPI_
@@ -302,36 +317,25 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	  if( OWReset()){
 
-		HAL_UART_Transmit(&huart2,&convert_T,16,5000);
+		OWTransmit();//HAL_UART_Transmit(&huart2,&convert_T,16,5000);
 
 		HAL_Delay(200);
 
-		if(OWReset() ){
-			HAL_UART_Transmit(&huart2,&read_scratch,16,5000);
+		OWReceive();
 
-			for(i=0;i<16;i++){
-				huart2.Instance->DR = 0xff;
-				HAL_Delay(10);
-				rx[i] = huart2.Instance->DR;
+	  RPi_SPI.tx_buff[2] = temp.raw;
 
-				if (rx[i] == 0xff) {
-					tt = (tt>>1) | 0x8000;
-				} else {
-					tt = tt>>1;
-				}
-			}
-			//HAL_UART_Receive(&huart2,&scratch,16,2000);
-			//HAL_UART_*/
-			HAL_Delay(1);
-			tt = tt>>4;
-		}
-	  }
+	  adc.in[ V4_SENSE ] = ReadAnalogADC1( V4_SENSE );
+	  adc.in[ RPI_3V3_SENSE ] = ReadAnalogADC1( RPI_3V3_SENSE );
+	  adc.in[ USB_5V_SENSE ] = ReadAnalogADC1( USB_5V_SENSE );
+	  adc.in[ VIN_SENSE ] = ReadAnalogADC1( VIN_SENSE );
+	  adc.in[ A14 ] = ReadAnalogADC1( A14 );
+	  adc.in[ A15 ] = ReadAnalogADC1( A15 );
 
-	  RPi_SPI.tx_buff[2] = tt;
+	  for(i=0;i<16;i++)
+		  adc.v[i] = ( adc.v[i] + adc.in[i]*(3.3/4095.0)*(3.9+2.2)/3.9 )/2.0;
 
-	  adc.rpi_3v3 = ReadAnalogADC1( RPI_3V3_SENSE );
 	  RPi_SPI.tx_buff[0] = (uint8_t)(adc.rpi_3v3>>8);
 	  RPi_SPI.tx_buff[1] = (uint8_t)adc.rpi_3v3;
 
@@ -348,7 +352,12 @@ int main(void)
 		  //HAL_SPI_Receive_IT(&hspi2, &RPi_SPI.rx_buff, 3);
 		  //HAL_SPI_TransmitReceive_IT(&hspi2, &RPi_SPI.tx_buff,&RPi_SPI.rx_buff, 3);
 	  }*/
-
+	  sim_tx[0] = 'A';
+	  sim_tx[1] = 'T';
+	  sim_tx[2] = '\r';
+	  sim_tx[3] = '\n';
+	  HAL_UART_Transmit(&huart1,&sim_tx,4,5000);
+	  HAL_Delay(100);
 		//
   }
   /* USER CODE END 3 */
@@ -573,7 +582,7 @@ static void MX_USART1_UART_Init(void)
 {
 
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 9600;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -758,6 +767,37 @@ bool OWReset(void){
 		return false;
 
 	return true;
+}
+
+void OWTransmit(void){
+	temp.reset = OWReset();
+	if(temp.reset) HAL_UART_Transmit(&huart2,&convert_T,16,5000);
+}
+void OWReceive(void){
+	uint8_t rx=0;
+	uint8_t i=0;
+
+	temp.reset = OWReset();
+	if( temp.reset ){
+		temp.raw = 0;
+				HAL_UART_Transmit(&huart2,&read_scratch,16,5000);
+
+				for(i=0;i<16;i++){
+					huart2.Instance->DR = 0xff;
+					HAL_Delay(10);
+					rx = huart2.Instance->DR;
+
+					if (rx == 0xff) {
+						temp.raw = (temp.raw>>1) | 0x8000;
+					} else {
+						temp.raw = temp.raw>>1;
+					}
+				}
+				//HAL_UART_Receive(&huart2,&scratch,16,2000);
+				//HAL_UART_*/
+				HAL_Delay(1);
+				temp.out = (temp.out + (int)(temp.raw>>4) )/2;
+			}
 }
 
 //OT
