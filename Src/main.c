@@ -72,6 +72,30 @@ UART_HandleTypeDef huart3;
 #define OW_1    0xff
 #define OW_R    0xff
 
+//OT defenititons
+#define OT_MSG_TYPE_SHIFT				28
+#define OT_MSG_TYPE_M_READ_DATA			0
+#define OT_MSG_TYPE_M_WRITE_DATA		1
+#define OT_MSG_TYPE_M_INVALID_DATA		2
+#define OT_MSG_TYPE_M_RESERVED			3
+#define OT_MSG_TYPE_S_READ_ACK			4
+#define OT_MSG_TYPE_S_WRITE_ACK			5
+#define OT_MSG_TYPE_S_DATA_INVALID		6
+#define OT_MSG_TYPE_S_UNKNOWN_DATAID	7
+
+#define OT_DATA_ID_SHIFT		16
+#define OT_DATA_ID_Status						0	//R-
+#define OT_DATA_ID_TSet							1	//-W
+#define OT_DATA_ID_MConfig_ID					2	//-W
+#define OT_DATA_ID_SConfig_ID					3	//R-
+#define OT_DATA_ID_Command						4	//
+#define OT_DATA_ID_ASFFlags_OEM_fault_code		5	//R-
+#define OT_DATA_ID_RBPFlags						6	//R-
+#define OT_DATA_ID_CoolingControl				7	//-W
+
+#define OT_DATA_ID_FHBIndex_FHBValue			13	//R-
+#define OT_DATA_ID_DHWFlowRate					19	//R-
+#define OT_DATA_ID_TBoiler						25	//R-
 
 const uint8_t convert_T[] = {
                 OW_0, OW_0, OW_1, OW_1, OW_0, OW_0, OW_1, OW_1, // 0xcc SKIP ROM
@@ -91,6 +115,31 @@ uint32_t micros;
 
 uint8_t sim_tx[10];
 uint8_t sim_rx[10];
+
+//openterm
+//P MGS-TYPE SPARE DATA-ID  DATA-VALUE
+//0 000      0000  00000000 00000000 00000000
+unsigned long requests[] = {
+  0x300, //0 get status
+  //0x90014000, //1 set CH temp //64C
+  //0x80190000, //25 Boiler water temperature
+  0,
+ ( (0x00000000) | ( ((long)3)<<16) ),
+ ( (0x80000000) | ( ((long)5)<<16) ),
+ ( (0x80000000) | ( ((long)6)<<16) ),
+ ( (0x80000000) | ( ((long)9)<<16) ),
+ ( (0x80000000) | ( ((long)10)<<16) ),
+ ( (0x80000000) | ( ((long)12)<<16) ),
+ ( (0x80000000) | ( ((long)13)<<16) ),//
+ ( (0x80000000) | ( ((long)15)<<16) ),
+ ( (0x80000000) | ( ((long)17)<<16) ),
+ ( (0x80000000) | ( ((long)18)<<16) ),
+ ( (0x80000000) | ( ((long)19)<<16) ),//
+  0x807c0000,
+};
+
+
+
 /* Private variables ---------------------------------------------------------*/
 ADC_ChannelConfTypeDef adcChannel;
 
@@ -128,10 +177,24 @@ TEMP_Struct temp;
 //P MGS-TYPE SPARE DATA-ID  DATA-VALUE
 //0 000      0000  00000000 00000000 00000000
 typedef struct{
-	uint32_t rx;
-	uint32_t tx;
+	bool PARITY;
+	uint8_t MSG_TYPE;
+	uint8_t SPARE;
+	uint8_t DATA_ID;
+	uint16_t DATA_VALUE;
+	uint32_t raw;
+	bool error;
+	bool timeout;
+}OT_Frame_Struct;
+
+typedef struct{
+	OT_Frame_Struct rx;
+	OT_Frame_Struct tx;
+	uint32_t errorCount;
+	OT_Frame_Struct reg[256];
 }OT_Struct;
 OT_Struct ot;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -261,6 +324,7 @@ int main(void)
 
 	uint16_t tt=0;
 	int Temp;
+	//int index;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -304,6 +368,8 @@ int main(void)
   RPi_SPI.tx_buff[2] = 0x0F;*/
   //HAL_SPI_
 
+  //OpenTherm init
+  activateBoiler();
 
 
 
@@ -357,7 +423,15 @@ int main(void)
 	  sim_tx[2] = '\r';
 	  sim_tx[3] = '\n';
 	  HAL_UART_Transmit(&huart1,&sim_tx,4,5000);
-	  HAL_Delay(100);
+
+	  ///OT
+	  for (int index = 0; index < (sizeof(requests) / sizeof(unsigned long)); index++) {
+	    sendRequest(requests[index]);
+	    HAL_Delay(300);
+	  }
+
+
+	  HAL_Delay(300);
 		//
   }
   /* USER CODE END 3 */
@@ -816,9 +890,9 @@ void activateBoiler(void){
 }
 void sendBit(bool high){
 	  if (high) setActiveState(); else setIdleState();
-	  	  delayMicros(500);
+	  delayMicros(500);
 	  if (high) setIdleState(); else setActiveState();
-	  	  delayMicros(500);
+	  delayMicros(500);
 }
 void sendFrame(uint32_t request){
 	  sendBit(true); //start bit
