@@ -272,6 +272,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if (htim->Instance==TIM4) //check if the interrupt comes from TIM3
 	{
 		micros++;
+		//if(micros%1000==0)
+			//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 	}
 }
 
@@ -279,7 +281,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart->Instance==USART3){
 		if(RPi_UART.rx_buff[0]=='H' && RPi_UART.rx_buff[1]=='e' && RPi_UART.rx_buff[2]=='l'){
-			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+			//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		}
 		HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,3);
 	}
@@ -290,7 +292,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 void HAL_SYSTICK_Callback(void){
 
 	  if(HAL_GetTick()%1000==0){
-		  //HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+		 // HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		  //SEND DATA OVER SPI TO RPi
 		  	/*HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_RESET);
 		  	RPi_SPI.address = 0xAA;
@@ -324,6 +326,8 @@ int main(void)
 
 	uint16_t tt=0;
 	int Temp;
+
+	uint32_t re;
 	//int index;
   /* USER CODE END 1 */
 
@@ -422,17 +426,28 @@ int main(void)
 	  sim_tx[1] = 'T';
 	  sim_tx[2] = '\r';
 	  sim_tx[3] = '\n';
-	  HAL_UART_Transmit(&huart1,&sim_tx,4,5000);
+	  //HAL_UART_Transmit(&huart1,&sim_tx,4,5000);
 
 	  ///OT
 	  for (int index = 0; index < (sizeof(requests) / sizeof(unsigned long)); index++) {
-	    sendRequest(requests[index]);
+	    ot.reg[index].raw = sendRequest(requests[index]);
 	    HAL_Delay(300);
 	  }
 
 
 	  HAL_Delay(300);
+	  //if(htim4.==0)
+	  			//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//
+
+	  /*while(1){
+		  for (int index = 0; index < 1000; index++)
+			  delayMicros(1000);
+		  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+		  for (int index = 0; index < 1000; index++)
+			  delayMicros(1000);
+		  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+	  }*/
   }
   /* USER CODE END 3 */
 
@@ -626,9 +641,9 @@ static void MX_TIM4_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 1;
+  htim4.Init.Prescaler = 64;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 64;
+  htim4.Init.Period = 65000;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
@@ -911,9 +926,9 @@ uint32_t sendRequest(uint32_t request){
 	  return readResponse();
 }
 bool waitForResponse(){
-	uint32_t time_stamp = micros;
+	uint32_t time_stamp = HAL_GetTick();
 	  while (HAL_GPIO_ReadPin(OT_TXI_GPIO_Port,OT_TXI_Pin) != GPIO_PIN_SET) { //start bit
-	    if (micros - time_stamp >= 1000000) {
+	    if (HAL_GetTick() - time_stamp >= 1000) {
 	      //Serial.println("Response timeout");
 	      return false;
 	    }
@@ -940,20 +955,46 @@ uint32_t readResponse(){
 	  }*/
 	  return response;
 }
-void delayMicros(uint32_t t){
-	  uint32_t tickstart = micros;
-	  uint32_t wait = t;
 
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+
+void delayMicros(uint32_t t){
+	  //uint32_t tickstart = micros;
+	volatile uint32_t wait = t*7;
+	  /*uint32_t end = micros+t;
+*/
+	 // if(tickstart+wait>UINT32_MAX)
 	  /* Add a freq to guarantee minimum wait */
 	  /*if (wait < HAL_MAX_DELAY)
 	  {
 	    wait += (uint32_t)(uwTickFreq);
 	  }*/
 
-	  while ((micros - tickstart) < wait)
+
+	 /* while ( micros  < end)
 	  {
+	  }*/
+	while (wait--){
+
+	}
+
+	/*volatile uint32_t DWT_START = DWT->CYCCNT;
+	  // keep DWT_TOTAL from overflowing (max 59.652323s w/72MHz SystemCoreClock)
+	  if (t > (UINT32_MAX / 64))
+	  {
+	    t = (UINT32_MAX / 64);
 	  }
+
+	  volatile uint32_t DWT_TOTAL = (64 * t);
+
+	  while((DWT->CYCCNT - DWT_START) < DWT_TOTAL)
+	  {
+	    //HAL_Notify_WDT();
+	  }*/
 }
+
+#pragma GCC pop_options
 
 /* USER CODE END 4 */
 
