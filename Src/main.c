@@ -191,7 +191,8 @@ typedef struct{
 	OT_Frame_Struct rx;
 	OT_Frame_Struct tx;
 	uint32_t errorCount;
-	OT_Frame_Struct reg[256];
+	//OT_Frame_Struct reg[256];
+	uint32_t reg[20];
 }OT_Struct;
 OT_Struct ot;
 
@@ -360,7 +361,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   micros=0;
-  HAL_TIM_Base_Start_IT(&htim4);
+
+  //HAL_TIM_Base_Stop_IT(&htim4);
   initADC();
   //HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
   HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,3);
@@ -430,8 +432,9 @@ int main(void)
 
 	  ///OT
 	  for (int index = 0; index < (sizeof(requests) / sizeof(unsigned long)); index++) {
-	    ot.reg[index].raw = sendRequest(requests[index]);
+	    ot.reg[index] = sendRequest(requests[index]);
 	    HAL_Delay(300);
+	    HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 	  }
 
 
@@ -440,14 +443,14 @@ int main(void)
 	  			//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//
 
-	  /*while(1){
-		  for (int index = 0; index < 1000; index++)
+	 while(1){
+		  for (int index = 0; index < 500; index++)
 			  delayMicros(1000);
 		  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-		  for (int index = 0; index < 1000; index++)
+		  for (int index = 0; index < 500; index++)
 			  delayMicros(1000);
 		  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-	  }*/
+	  }
   }
   /* USER CODE END 3 */
 
@@ -645,7 +648,7 @@ static void MX_TIM4_Init(void)
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim4.Init.Period = 65000;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -961,7 +964,11 @@ uint32_t readResponse(){
 
 void delayMicros(uint32_t t){
 	  //uint32_t tickstart = micros;
-	volatile uint32_t wait = t*7;
+	//volatile uint32_t wait = t*5;
+
+	TIM4->ARR = t;
+	HAL_TIM_Base_Start(&htim4);
+	TIM4->ARR = t;
 	  /*uint32_t end = micros+t;
 */
 	 // if(tickstart+wait>UINT32_MAX)
@@ -975,10 +982,10 @@ void delayMicros(uint32_t t){
 	 /* while ( micros  < end)
 	  {
 	  }*/
-	while (wait--){
+	while (TIM4->CNT < TIM4->ARR){
 
 	}
-
+	HAL_TIM_Base_Stop(&htim4);
 	/*volatile uint32_t DWT_START = DWT->CYCCNT;
 	  // keep DWT_TOTAL from overflowing (max 59.652323s w/72MHz SystemCoreClock)
 	  if (t > (UINT32_MAX / 64))
