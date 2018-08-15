@@ -1,16 +1,21 @@
 init
+# features
 
-#todo
+* TIM4 for microseconds delay 
+# todo
 
-make openterm lib
-make coverstion with RPi
-make battery control
+* make openterm lib
+* make coverstion with RPi
+* make battery control
 
-f8.8 covert to float
-parity calc
+* f8.8 covert to float
+* parity calc
 
-#make R4 700 Ohm
-#STM UART3 - RPi UART0
+* UNION usage for UART STM-RPi Protocol
 
-#PA8 Output
-#PA15 Input
+# electronics issue
+* make R4 700 Ohm
+* STM UART3 - RPi UART0
+
+* PA8 Output
+* PA15 Input
