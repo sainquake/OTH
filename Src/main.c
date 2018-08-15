@@ -759,17 +759,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_R_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : OT_TXI_Pin */
-  GPIO_InitStruct.Pin = OT_TXI_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(OT_TXI_GPIO_Port, &GPIO_InitStruct);
-
   /*Configure GPIO pin : OT_RXO_Pin */
   GPIO_InitStruct.Pin = OT_RXO_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(OT_RXO_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : OT_TXI_Pin */
+  GPIO_InitStruct.Pin = OT_TXI_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(OT_TXI_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : NSS1_Pin */
   GPIO_InitStruct.Pin = NSS1_Pin;

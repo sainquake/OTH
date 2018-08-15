@@ -5585,7 +5585,8 @@ int main(void)
  800275e:	f042 0204 	orr.w	r2, r2, #4
  8002762:	619a      	str	r2, [r3, #24]
  8002764:	699a      	ldr	r2, [r3, #24]
-  HAL_GPIO_Init(LED_R_GPIO_Port, &GPIO_InitStruct);
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(OT_RXO_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : OT_TXI_Pin */
   GPIO_InitStruct.Pin = OT_TXI_Pin;
@@ -5618,7 +5619,7 @@ int main(void)
  8002796:	f7fe ffa3 	bl	80016e0 <HAL_GPIO_WritePin>
   HAL_GPIO_WritePin(OT_RXO_GPIO_Port, OT_RXO_Pin, GPIO_PIN_RESET);
  800279a:	2200      	movs	r2, #0
- 800279c:	f44f 4100 	mov.w	r1, #32768	; 0x8000
+ 800279c:	f44f 7180 	mov.w	r1, #256	; 0x100
  80027a0:	4875      	ldr	r0, [pc, #468]	; (8002978 <main+0x248>)
  80027a2:	f7fe ff9d 	bl	80016e0 <HAL_GPIO_WritePin>
   HAL_GPIO_WritePin(NSS1_GPIO_Port, NSS1_Pin, GPIO_PIN_RESET);
@@ -5637,36 +5638,32 @@ int main(void)
  80027b8:	9707      	str	r7, [sp, #28]
   HAL_GPIO_Init(LED_R_GPIO_Port, &GPIO_InitStruct);
  80027ba:	f7fe feab 	bl	8001514 <HAL_GPIO_Init>
-  GPIO_InitStruct.Pin = OT_TXI_Pin;
+  GPIO_InitStruct.Pin = OT_RXO_Pin;
  80027be:	f44f 7380 	mov.w	r3, #256	; 0x100
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(OT_TXI_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(OT_RXO_GPIO_Port, &GPIO_InitStruct);
  80027c2:	a906      	add	r1, sp, #24
  80027c4:	486c      	ldr	r0, [pc, #432]	; (8002978 <main+0x248>)
-  GPIO_InitStruct.Pin = OT_TXI_Pin;
- 80027c6:	9306      	str	r3, [sp, #24]
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
- 80027c8:	9607      	str	r6, [sp, #28]
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
- 80027ca:	9608      	str	r6, [sp, #32]
-  HAL_GPIO_Init(OT_TXI_GPIO_Port, &GPIO_InitStruct);
- 80027cc:	f7fe fea2 	bl	8001514 <HAL_GPIO_Init>
-
-  /*Configure GPIO pin : OT_RXO_Pin */
   GPIO_InitStruct.Pin = OT_RXO_Pin;
- 80027d0:	f44f 4300 	mov.w	r3, #32768	; 0x8000
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+ 80027c6:	9306      	str	r3, [sp, #24]
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+ 80027c8:	9509      	str	r5, [sp, #36]	; 0x24
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+ 80027ca:	9707      	str	r7, [sp, #28]
   HAL_GPIO_Init(OT_RXO_GPIO_Port, &GPIO_InitStruct);
+ 80027cc:	f7fe fea2 	bl	8001514 <HAL_GPIO_Init>
+  GPIO_InitStruct.Pin = OT_TXI_Pin;
+ 80027d0:	f44f 4300 	mov.w	r3, #32768	; 0x8000
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(OT_TXI_GPIO_Port, &GPIO_InitStruct);
  80027d4:	a906      	add	r1, sp, #24
  80027d6:	4868      	ldr	r0, [pc, #416]	; (8002978 <main+0x248>)
-  GPIO_InitStruct.Pin = OT_RXO_Pin;
+  GPIO_InitStruct.Pin = OT_TXI_Pin;
  80027d8:	9306      	str	r3, [sp, #24]
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
- 80027da:	9509      	str	r5, [sp, #36]	; 0x24
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
- 80027dc:	9707      	str	r7, [sp, #28]
-  HAL_GPIO_Init(OT_RXO_GPIO_Port, &GPIO_InitStruct);
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+ 80027da:	9607      	str	r6, [sp, #28]
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+ 80027dc:	9608      	str	r6, [sp, #32]
+  HAL_GPIO_Init(OT_TXI_GPIO_Port, &GPIO_InitStruct);
  80027de:	f7fe fe99 	bl	8001514 <HAL_GPIO_Init>
 
   /*Configure GPIO pin : NSS1_Pin */
@@ -6576,7 +6573,7 @@ void initOT(void){
 void setIdleState(void){
 	HAL_GPIO_WritePin(OT_RXO_GPIO_Port, OT_RXO_Pin, GPIO_PIN_SET);
  8002d54:	2201      	movs	r2, #1
- 8002d56:	f44f 4100 	mov.w	r1, #32768	; 0x8000
+ 8002d56:	f44f 7180 	mov.w	r1, #256	; 0x100
  8002d5a:	4801      	ldr	r0, [pc, #4]	; (8002d60 <setIdleState+0xc>)
  8002d5c:	f7fe bcc0 	b.w	80016e0 <HAL_GPIO_WritePin>
  8002d60:	40010800 	.word	0x40010800
@@ -6586,7 +6583,7 @@ void setIdleState(void){
 void setActiveState(void){
 	HAL_GPIO_WritePin(OT_RXO_GPIO_Port, OT_RXO_Pin, GPIO_PIN_RESET);
  8002d64:	2200      	movs	r2, #0
- 8002d66:	f44f 4100 	mov.w	r1, #32768	; 0x8000
+ 8002d66:	f44f 7180 	mov.w	r1, #256	; 0x100
  8002d6a:	4801      	ldr	r0, [pc, #4]	; (8002d70 <setActiveState+0xc>)
  8002d6c:	f7fe bcb8 	b.w	80016e0 <HAL_GPIO_WritePin>
  8002d70:	40010800 	.word	0x40010800
@@ -6683,7 +6680,7 @@ bool waitForResponse(){
  8002dfe:	4606      	mov	r6, r0
 	  while (HAL_GPIO_ReadPin(OT_TXI_GPIO_Port,OT_TXI_Pin) != GPIO_PIN_SET) { //start bit
  8002e00:	4d0b      	ldr	r5, [pc, #44]	; (8002e30 <waitForResponse+0x38>)
- 8002e02:	f44f 7180 	mov.w	r1, #256	; 0x100
+ 8002e02:	f44f 4100 	mov.w	r1, #32768	; 0x8000
  8002e06:	4628      	mov	r0, r5
  8002e08:	f7fe fc64 	bl	80016d4 <HAL_GPIO_ReadPin>
  8002e0c:	2801      	cmp	r0, #1
@@ -6721,7 +6718,7 @@ uint32_t readResponse(){
 	  for (int i = 0; i < 32; i++) {
 	    response = (response << 1) | HAL_GPIO_ReadPin(OT_TXI_GPIO_Port,OT_TXI_Pin);// digitalRead(OT_IN_PIN);
  8002e3a:	4e08      	ldr	r6, [pc, #32]	; (8002e5c <readResponse+0x28>)
- 8002e3c:	f44f 7180 	mov.w	r1, #256	; 0x100
+ 8002e3c:	f44f 4100 	mov.w	r1, #32768	; 0x8000
  8002e40:	4630      	mov	r0, r6
  8002e42:	f7fe fc47 	bl	80016d4 <HAL_GPIO_ReadPin>
  8002e46:	0064      	lsls	r4, r4, #1

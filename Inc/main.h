@@ -51,10 +51,10 @@
 
 #define LED_R_Pin GPIO_PIN_6
 #define LED_R_GPIO_Port GPIOC
-#define OT_TXI_Pin GPIO_PIN_8
-#define OT_TXI_GPIO_Port GPIOA
-#define OT_RXO_Pin GPIO_PIN_15
+#define OT_RXO_Pin GPIO_PIN_8
 #define OT_RXO_GPIO_Port GPIOA
+#define OT_TXI_Pin GPIO_PIN_15
+#define OT_TXI_GPIO_Port GPIOA
 #define NSS1_Pin GPIO_PIN_2
 #define NSS1_GPIO_Port GPIOD
 
