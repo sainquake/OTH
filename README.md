@@ -19,3 +19,6 @@ init
 
 * PA8 Output
 * PA15 Input
+
+* https://github.com/ihormelnyk/arduino_opentherm_controller - opentherm arduino example
+*https://github.com/jpraus/arduino-opentherm/blob/master/src/opentherm.cpp - Parity Bit Function

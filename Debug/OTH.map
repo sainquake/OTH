@@ -38,7 +38,7 @@ micros              0x4               Src\main.o
 sim_rx              0xa               Src\main.o
 sim_tx              0xa               Src\main.o
 hspi1               0x58              Src\main.o
-ot                  0x74              Src\main.o
+ot                  0x5c              Src\main.o
 huart2              0x40              Src\main.o
 adcChannel          0xc               Src\main.o
 
@@ -1025,6 +1025,8 @@ Discarded input sections
  .text.GetAnalogADC1
                 0x00000000       0x14 Src\main.o
  .text.initOT   0x00000000        0x2 Src\main.o
+ .text.checkParity
+                0x00000000       0x1c Src\main.o
  .text._Error_Handler
                 0x00000000        0x2 Src\main.o
  .text          0x00000000        0x0 Src\stm32f1xx_hal_msp.o
@@ -1624,7 +1626,7 @@ LOAD c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../l
  .igot.plt      0x20000044        0x0 c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m/crtbegin.o
                 0x20000044                . = ALIGN (0x4)
 
-.bss            0x20000044      0x408 load address 0x08003430
+.bss            0x20000044      0x3f0 load address 0x08003430
                 0x20000044                _sbss = .
                 0x20000044                __bss_start__ = _sbss
  *(.bss)
@@ -1633,7 +1635,7 @@ LOAD c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../l
  *(COMMON)
  COMMON         0x20000060        0x4 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal.o
                 0x20000060                uwTick
- COMMON         0x20000064      0x3e8 Src\main.o
+ COMMON         0x20000064      0x3d0 Src\main.o
                 0x20000064                scratch
                 0x20000084                hspi2
                 0x200000dc                htim4
@@ -1651,22 +1653,22 @@ LOAD c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../l
                 0x2000032a                sim_tx
                 0x20000334                hspi1
                 0x2000038c                ot
-                0x20000400                huart2
-                0x20000440                adcChannel
-                0x2000044c                . = ALIGN (0x4)
-                0x2000044c                _ebss = .
-                0x2000044c                __bss_end__ = _ebss
+                0x200003e8                huart2
+                0x20000428                adcChannel
+                0x20000434                . = ALIGN (0x4)
+                0x20000434                _ebss = .
+                0x20000434                __bss_end__ = _ebss
 
 ._user_heap_stack
-                0x2000044c      0x600 load address 0x08003430
-                0x2000044c                . = ALIGN (0x4)
+                0x20000434      0x600 load address 0x08003430
+                0x20000434                . = ALIGN (0x4)
                 [!provide]                PROVIDE (end, .)
                 [!provide]                PROVIDE (_end, .)
-                0x2000064c                . = (. + _Min_Heap_Size)
- *fill*         0x2000044c      0x200 
-                0x20000a4c                . = (. + _Min_Stack_Size)
- *fill*         0x2000064c      0x400 
-                0x20000a4c                . = ALIGN (0x4)
+                0x20000634                . = (. + _Min_Heap_Size)
+ *fill*         0x20000434      0x200 
+                0x20000a34                . = (. + _Min_Stack_Size)
+ *fill*         0x20000634      0x400 
+                0x20000a34                . = ALIGN (0x4)
 
 /DISCARD/
  libc.a(*)
@@ -1734,7 +1736,7 @@ LOAD c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../l
                 0x000004bf       0x1d c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m/crtn.o
 OUTPUT(OTH.elf elf32-littlearm)
 
-.debug_info     0x00000000    0x1de7c
+.debug_info     0x00000000    0x1dec4
  .debug_info    0x00000000      0xfba Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal.o
  .debug_info    0x00000fba     0x165b Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_adc.o
  .debug_info    0x00002615     0x1474 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_can.o
@@ -1749,13 +1751,13 @@ OUTPUT(OTH.elf elf32-littlearm)
  .debug_info    0x0000f58e     0x3b73 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim.o
  .debug_info    0x00013101     0x1943 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim_ex.o
  .debug_info    0x00014a44     0x1e00 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_uart.o
- .debug_info    0x00016844     0x32ba Src\main.o
- .debug_info    0x00019afe     0x261a Src\stm32f1xx_hal_msp.o
- .debug_info    0x0001c118     0x10f6 Src\stm32f1xx_it.o
- .debug_info    0x0001d20e      0xc07 Src\system_stm32f1xx.o
- .debug_info    0x0001de15       0x67 startup\startup_stm32f103xb.o
+ .debug_info    0x00016844     0x3302 Src\main.o
+ .debug_info    0x00019b46     0x261a Src\stm32f1xx_hal_msp.o
+ .debug_info    0x0001c160     0x10f6 Src\stm32f1xx_it.o
+ .debug_info    0x0001d256      0xc07 Src\system_stm32f1xx.o
+ .debug_info    0x0001de5d       0x67 startup\startup_stm32f103xb.o
 
-.debug_abbrev   0x00000000     0x3660
+.debug_abbrev   0x00000000     0x3691
  .debug_abbrev  0x00000000      0x308 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal.o
  .debug_abbrev  0x00000308      0x2fb Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_adc.o
  .debug_abbrev  0x00000603      0x30d Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_can.o
@@ -1770,13 +1772,13 @@ OUTPUT(OTH.elf elf32-littlearm)
  .debug_abbrev  0x000020c1      0x3bb Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim.o
  .debug_abbrev  0x0000247c      0x30d Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim_ex.o
  .debug_abbrev  0x00002789      0x364 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_uart.o
- .debug_abbrev  0x00002aed      0x466 Src\main.o
- .debug_abbrev  0x00002f53      0x2ff Src\stm32f1xx_hal_msp.o
- .debug_abbrev  0x00003252      0x211 Src\stm32f1xx_it.o
- .debug_abbrev  0x00003463      0x1eb Src\system_stm32f1xx.o
- .debug_abbrev  0x0000364e       0x12 startup\startup_stm32f103xb.o
+ .debug_abbrev  0x00002aed      0x497 Src\main.o
+ .debug_abbrev  0x00002f84      0x2ff Src\stm32f1xx_hal_msp.o
+ .debug_abbrev  0x00003283      0x211 Src\stm32f1xx_it.o
+ .debug_abbrev  0x00003494      0x1eb Src\system_stm32f1xx.o
+ .debug_abbrev  0x0000367f       0x12 startup\startup_stm32f103xb.o
 
-.debug_loc      0x00000000     0xba9b
+.debug_loc      0x00000000     0xbbce
  .debug_loc     0x00000000      0x11b Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal.o
  .debug_loc     0x0000011b      0x873 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_adc.o
  .debug_loc     0x0000098e      0x973 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_can.o
@@ -1791,11 +1793,11 @@ OUTPUT(OTH.elf elf32-littlearm)
  .debug_loc     0x0000693f     0x300c Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim.o
  .debug_loc     0x0000994b      0x822 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim_ex.o
  .debug_loc     0x0000a16d     0x1311 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_uart.o
- .debug_loc     0x0000b47e      0x2e6 Src\main.o
- .debug_loc     0x0000b764      0x26a Src\stm32f1xx_hal_msp.o
- .debug_loc     0x0000b9ce       0xcd Src\system_stm32f1xx.o
+ .debug_loc     0x0000b47e      0x419 Src\main.o
+ .debug_loc     0x0000b897      0x26a Src\stm32f1xx_hal_msp.o
+ .debug_loc     0x0000bb01       0xcd Src\system_stm32f1xx.o
 
-.debug_aranges  0x00000000      0xe18
+.debug_aranges  0x00000000      0xe20
  .debug_aranges
                 0x00000000       0xc8 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal.o
  .debug_aranges
@@ -1825,17 +1827,17 @@ OUTPUT(OTH.elf elf32-littlearm)
  .debug_aranges
                 0x00000aa0      0x170 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_uart.o
  .debug_aranges
-                0x00000c10       0xd0 Src\main.o
+                0x00000c10       0xd8 Src\main.o
  .debug_aranges
-                0x00000ce0       0x80 Src\stm32f1xx_hal_msp.o
+                0x00000ce8       0x80 Src\stm32f1xx_hal_msp.o
  .debug_aranges
-                0x00000d60       0x68 Src\stm32f1xx_it.o
+                0x00000d68       0x68 Src\stm32f1xx_it.o
  .debug_aranges
-                0x00000dc8       0x28 Src\system_stm32f1xx.o
+                0x00000dd0       0x28 Src\system_stm32f1xx.o
  .debug_aranges
-                0x00000df0       0x28 startup\startup_stm32f103xb.o
+                0x00000df8       0x28 startup\startup_stm32f103xb.o
 
-.debug_ranges   0x00000000     0x1490
+.debug_ranges   0x00000000     0x1498
  .debug_ranges  0x00000000       0xb8 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal.o
  .debug_ranges  0x000000b8       0xb8 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_adc.o
  .debug_ranges  0x00000170       0x90 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_can.o
@@ -1850,13 +1852,13 @@ OUTPUT(OTH.elf elf32-littlearm)
  .debug_ranges  0x00000b30      0x340 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim.o
  .debug_ranges  0x00000e70       0xd8 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim_ex.o
  .debug_ranges  0x00000f48      0x190 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_uart.o
- .debug_ranges  0x000010d8      0x178 Src\main.o
- .debug_ranges  0x00001250      0x1b0 Src\stm32f1xx_hal_msp.o
- .debug_ranges  0x00001400       0x58 Src\stm32f1xx_it.o
- .debug_ranges  0x00001458       0x18 Src\system_stm32f1xx.o
- .debug_ranges  0x00001470       0x20 startup\startup_stm32f103xb.o
+ .debug_ranges  0x000010d8      0x180 Src\main.o
+ .debug_ranges  0x00001258      0x1b0 Src\stm32f1xx_hal_msp.o
+ .debug_ranges  0x00001408       0x58 Src\stm32f1xx_it.o
+ .debug_ranges  0x00001460       0x18 Src\system_stm32f1xx.o
+ .debug_ranges  0x00001478       0x20 startup\startup_stm32f103xb.o
 
-.debug_line     0x00000000     0x9012
+.debug_line     0x00000000     0x9029
  .debug_line    0x00000000      0x45f Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal.o
  .debug_line    0x0000045f      0x86c Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_adc.o
  .debug_line    0x00000ccb      0x8a3 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_can.o
@@ -1871,13 +1873,13 @@ OUTPUT(OTH.elf elf32-littlearm)
  .debug_line    0x000057eb     0x114c Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim.o
  .debug_line    0x00006937      0x6ee Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim_ex.o
  .debug_line    0x00007025      0xc45 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_uart.o
- .debug_line    0x00007c6a      0x796 Src\main.o
- .debug_line    0x00008400      0x58a Src\stm32f1xx_hal_msp.o
- .debug_line    0x0000898a      0x383 Src\stm32f1xx_it.o
- .debug_line    0x00008d0d      0x288 Src\system_stm32f1xx.o
- .debug_line    0x00008f95       0x7d startup\startup_stm32f103xb.o
+ .debug_line    0x00007c6a      0x7ad Src\main.o
+ .debug_line    0x00008417      0x58a Src\stm32f1xx_hal_msp.o
+ .debug_line    0x000089a1      0x383 Src\stm32f1xx_it.o
+ .debug_line    0x00008d24      0x288 Src\system_stm32f1xx.o
+ .debug_line    0x00008fac       0x7d startup\startup_stm32f103xb.o
 
-.debug_str      0x00000000     0x51a0
+.debug_str      0x00000000     0x51ae
  .debug_str     0x00000000      0xbb1 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal.o
                                 0xc5d (size before relaxing)
  .debug_str     0x00000bb1      0x65e Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_adc.o
@@ -1904,15 +1906,15 @@ OUTPUT(OTH.elf elf32-littlearm)
                                0x17a7 (size before relaxing)
  .debug_str     0x000041de      0x4f1 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim_ex.o
                                0x1049 (size before relaxing)
- .debug_str     0x000046cf      0x675 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_uart.o
+ .debug_str     0x000046cf      0x66e Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_uart.o
                                 0xfc0 (size before relaxing)
- .debug_str     0x00004d44      0x300 Src\main.o
-                               0x1e78 (size before relaxing)
- .debug_str     0x00005044       0x25 Src\stm32f1xx_hal_msp.o
+ .debug_str     0x00004d3d      0x315 Src\main.o
+                               0x1e87 (size before relaxing)
+ .debug_str     0x00005052       0x25 Src\stm32f1xx_hal_msp.o
                                0x17fc (size before relaxing)
- .debug_str     0x00005069       0xea Src\stm32f1xx_it.o
+ .debug_str     0x00005077       0xea Src\stm32f1xx_it.o
                                 0xc35 (size before relaxing)
- .debug_str     0x00005153       0x4d Src\system_stm32f1xx.o
+ .debug_str     0x00005161       0x4d Src\system_stm32f1xx.o
                                 0x6e1 (size before relaxing)
 
 .comment        0x00000000       0x7c
@@ -1936,7 +1938,7 @@ OUTPUT(OTH.elf elf32-littlearm)
  .comment       0x0000007c       0x7d Src\stm32f1xx_it.o
  .comment       0x0000007c       0x7d Src\system_stm32f1xx.o
 
-.debug_frame    0x00000000     0x2dec
+.debug_frame    0x00000000     0x2dfc
  .debug_frame   0x00000000      0x1b0 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal.o
  .debug_frame   0x000001b0      0x298 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_adc.o
  .debug_frame   0x00000448      0x1bc Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_can.o
@@ -1951,13 +1953,13 @@ OUTPUT(OTH.elf elf32-littlearm)
  .debug_frame   0x00001714      0x854 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim.o
  .debug_frame   0x00001f68      0x320 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_tim_ex.o
  .debug_frame   0x00002288      0x4a0 Drivers\STM32F1xx_HAL_Driver\Src\stm32f1xx_hal_uart.o
- .debug_frame   0x00002728      0x26c Src\main.o
- .debug_frame   0x00002994      0x16c Src\stm32f1xx_hal_msp.o
- .debug_frame   0x00002b00       0xec Src\stm32f1xx_it.o
- .debug_frame   0x00002bec       0x30 Src\system_stm32f1xx.o
- .debug_frame   0x00002c1c       0x2c c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7-m\libc_nano.a(lib_a-init.o)
- .debug_frame   0x00002c48       0xac c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m\libgcc.a(_arm_addsubdf3.o)
- .debug_frame   0x00002cf4       0x50 c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m\libgcc.a(_arm_muldivdf3.o)
- .debug_frame   0x00002d44       0x24 c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m\libgcc.a(_arm_truncdfsf2.o)
- .debug_frame   0x00002d68       0x4c c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m\libgcc.a(_arm_addsubsf3.o)
- .debug_frame   0x00002db4       0x38 c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m\libgcc.a(_arm_muldivsf3.o)
+ .debug_frame   0x00002728      0x27c Src\main.o
+ .debug_frame   0x000029a4      0x16c Src\stm32f1xx_hal_msp.o
+ .debug_frame   0x00002b10       0xec Src\stm32f1xx_it.o
+ .debug_frame   0x00002bfc       0x30 Src\system_stm32f1xx.o
+ .debug_frame   0x00002c2c       0x2c c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7-m\libc_nano.a(lib_a-init.o)
+ .debug_frame   0x00002c58       0xac c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m\libgcc.a(_arm_addsubdf3.o)
+ .debug_frame   0x00002d04       0x50 c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m\libgcc.a(_arm_muldivdf3.o)
+ .debug_frame   0x00002d54       0x24 c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m\libgcc.a(_arm_truncdfsf2.o)
+ .debug_frame   0x00002d78       0x4c c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m\libgcc.a(_arm_addsubsf3.o)
+ .debug_frame   0x00002dc4       0x38 c:/program files (x86)/atollic/truestudio for stm32 9.0.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7-m\libgcc.a(_arm_muldivsf3.o)

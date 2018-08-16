@@ -176,20 +176,25 @@ typedef struct{
 TEMP_Struct temp;
 //P MGS-TYPE SPARE DATA-ID  DATA-VALUE
 //0 000      0000  00000000 00000000 00000000
-typedef struct{
-	bool PARITY;
-	uint8_t MSG_TYPE;
-	uint8_t SPARE;
-	uint8_t DATA_ID;
-	uint16_t DATA_VALUE;
+typedef struct {
+	//8
+	bool PARITY: 1;
+	uint8_t MSG_TYPE:3;
+	uint8_t SPARE:4;
+	//8
+	uint8_t DATA_ID:8;
+	//16
+	uint16_t DATA_VALUE:16;
+} OTFrameStruct;
+
+union OTFrameUnion {
 	uint32_t raw;
-	bool error;
-	bool timeout;
-}OT_Frame_Struct;
+	OTFrameStruct frame;
+} ;
 
 typedef struct{
-	OT_Frame_Struct rx;
-	OT_Frame_Struct tx;
+	union OTFrameUnion rx;
+	union OTFrameUnion tx;
 	uint32_t errorCount;
 	//OT_Frame_Struct reg[256];
 	uint32_t reg[20];
@@ -945,6 +950,14 @@ uint32_t readResponse(){
 	    response = (response << 1) | HAL_GPIO_ReadPin(OT_TXI_GPIO_Port,OT_TXI_Pin);// digitalRead(OT_IN_PIN);
 	    delayMicros(1000);
 	  }
+
+	  union OTFrameUnion re;
+	  re.raw = response;
+	  re.frame.DATA_ID;
+	  re.frame.DATA_VALUE;
+	  re.frame.MSG_TYPE;
+	  re.frame.PARITY;
+	  re.frame.SPARE;
 	  //Serial.print("Response: ");
 	  //printBinary(response);
 	 // Serial.print(" / ");
@@ -1002,6 +1015,15 @@ void delayMicros(uint32_t t){
 }
 
 #pragma GCC pop_options
+
+bool checkParity(uint32_t val) {
+  val ^= val >> 16;
+  val ^= val >> 8;
+  val ^= val >> 4;
+  val ^= val >> 2;
+  val ^= val >> 1;
+  return (~val) & 1;
+}
 
 /* USER CODE END 4 */
 

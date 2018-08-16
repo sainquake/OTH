@@ -15,29 +15,29 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, ALLOC, LOAD, DATA
   5 .data         00000044  20000000  080033ec  00020000  2**2
                   CONTENTS, ALLOC, LOAD, DATA
-  6 .bss          00000408  20000044  08003430  00020044  2**2
+  6 .bss          000003f0  20000044  08003430  00020044  2**2
                   ALLOC
-  7 ._user_heap_stack 00000600  2000044c  08003430  0002044c  2**0
+  7 ._user_heap_stack 00000600  20000434  08003430  00020434  2**0
                   ALLOC
   8 .ARM.attributes 00000029  00000000  00000000  00020044  2**0
                   CONTENTS, READONLY
-  9 .debug_info   0001de7c  00000000  00000000  0002006d  2**0
+  9 .debug_info   0001dec4  00000000  00000000  0002006d  2**0
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_abbrev 00003660  00000000  00000000  0003dee9  2**0
+ 10 .debug_abbrev 00003691  00000000  00000000  0003df31  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_loc    0000ba9b  00000000  00000000  00041549  2**0
+ 11 .debug_loc    0000bbce  00000000  00000000  000415c2  2**0
                   CONTENTS, READONLY, DEBUGGING
- 12 .debug_aranges 00000e18  00000000  00000000  0004cfe8  2**3
+ 12 .debug_aranges 00000e20  00000000  00000000  0004d190  2**3
                   CONTENTS, READONLY, DEBUGGING
- 13 .debug_ranges 00001490  00000000  00000000  0004de00  2**3
+ 13 .debug_ranges 00001498  00000000  00000000  0004dfb0  2**3
                   CONTENTS, READONLY, DEBUGGING
- 14 .debug_line   00009012  00000000  00000000  0004f290  2**0
+ 14 .debug_line   00009029  00000000  00000000  0004f448  2**0
                   CONTENTS, READONLY, DEBUGGING
- 15 .debug_str    000051a0  00000000  00000000  000582a2  2**0
+ 15 .debug_str    000051ae  00000000  00000000  00058471  2**0
                   CONTENTS, READONLY, DEBUGGING
- 16 .comment      0000007c  00000000  00000000  0005d442  2**0
+ 16 .comment      0000007c  00000000  00000000  0005d61f  2**0
                   CONTENTS, READONLY
- 17 .debug_frame  00002dec  00000000  00000000  0005d4c0  2**2
+ 17 .debug_frame  00002dfc  00000000  00000000  0005d69c  2**2
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -5995,7 +5995,7 @@ int main(void)
  80029a8:	40003800 	.word	0x40003800
  80029ac:	20000258 	.word	0x20000258
  80029b0:	40013800 	.word	0x40013800
- 80029b4:	20000400 	.word	0x20000400
+ 80029b4:	200003e8 	.word	0x200003e8
  80029b8:	40004400 	.word	0x40004400
  80029bc:	20000134 	.word	0x20000134
  80029c0:	40004800 	.word	0x40004800
@@ -6127,7 +6127,7 @@ int main(void)
  8002aae:	59e0      	ldr	r0, [r4, r7]
  8002ab0:	f000 f997 	bl	8002de2 <sendRequest>
  8002ab4:	19a3      	adds	r3, r4, r6
- 8002ab6:	6258      	str	r0, [r3, #36]	; 0x24
+ 8002ab6:	60d8      	str	r0, [r3, #12]
 	    HAL_Delay(300);
  8002ab8:	f44f 7096 	mov.w	r0, #300	; 0x12c
  8002abc:	f7fe fa08 	bl	8000ed0 <HAL_Delay>
@@ -6300,7 +6300,7 @@ void initADC(void){
 	  HAL_ADC_Start(&hadc1);
  8002be6:	f7fe ba45 	b.w	8001074 <HAL_ADC_Start>
  8002bea:	bf00      	nop
- 8002bec:	20000440 	.word	0x20000440
+ 8002bec:	20000428 	.word	0x20000428
  8002bf0:	20000228 	.word	0x20000228
 
 08002bf4 <ReadAnalogADC1>:
@@ -6345,7 +6345,7 @@ int ReadAnalogADC1( uint32_t ch ){
 	return HAL_ADC_GetValue(&hadc1);
  8002c1e:	f7fe b969 	b.w	8000ef4 <HAL_ADC_GetValue>
  8002c22:	bf00      	nop
- 8002c24:	20000440 	.word	0x20000440
+ 8002c24:	20000428 	.word	0x20000428
  8002c28:	20000228 	.word	0x20000228
 
 08002c2c <OWReset>:
@@ -6453,7 +6453,7 @@ bool OWReset(void){
  8002c94:	2001      	movne	r0, #1
  8002c96:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
  8002c9a:	bf00      	nop
- 8002c9c:	20000400 	.word	0x20000400
+ 8002c9c:	200003e8 	.word	0x200003e8
  8002ca0:	40004400 	.word	0x40004400
 
 08002ca4 <OWTransmit>:
@@ -6477,7 +6477,7 @@ void OWTransmit(void){
  8002cc2:	bd10      	pop	{r4, pc}
  8002cc4:	2000020c 	.word	0x2000020c
  8002cc8:	0800339c 	.word	0x0800339c
- 8002ccc:	20000400 	.word	0x20000400
+ 8002ccc:	200003e8 	.word	0x200003e8
 
 08002cd0 <OWReceive>:
 void OWReceive(void){
@@ -6562,7 +6562,7 @@ void OWReceive(void){
  8002d42:	bf00      	nop
  8002d44:	2000020c 	.word	0x2000020c
  8002d48:	080033ac 	.word	0x080033ac
- 8002d4c:	20000400 	.word	0x20000400
+ 8002d4c:	200003e8 	.word	0x200003e8
  8002d50:	ffff8000 	.word	0xffff8000
 
 08002d54 <setIdleState>:
@@ -7798,7 +7798,7 @@ LoopFillZerobss:
   ldr r2, =_sbss
  8003320:	20000044 	.word	0x20000044
   ldr r3, = _ebss
- 8003324:	2000044c 	.word	0x2000044c
+ 8003324:	20000434 	.word	0x20000434
 
 08003328 <ADC1_2_IRQHandler>:
  * @retval : None
