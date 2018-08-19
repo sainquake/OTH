@@ -41,6 +41,8 @@
 
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include "OT.h"
+#include "DS18B20.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -60,7 +62,6 @@ UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
-
 #define V4_SENSE		ADC_CHANNEL_4
 #define RPI_3V3_SENSE 	ADC_CHANNEL_5
 #define USB_5V_SENSE	ADC_CHANNEL_6
@@ -68,78 +69,10 @@ UART_HandleTypeDef huart3;
 #define A14				ADC_CHANNEL_14
 #define A15				ADC_CHANNEL_15
 
-#define OW_0    0x00
-#define OW_1    0xff
-#define OW_R    0xff
-
-//OT defenititons
-#define OT_MSG_TYPE_SHIFT				28
-#define OT_MSG_TYPE_M_READ_DATA			0
-#define OT_MSG_TYPE_M_WRITE_DATA		1
-#define OT_MSG_TYPE_M_INVALID_DATA		2
-#define OT_MSG_TYPE_M_RESERVED			3
-#define OT_MSG_TYPE_S_READ_ACK			4
-#define OT_MSG_TYPE_S_WRITE_ACK			5
-#define OT_MSG_TYPE_S_DATA_INVALID		6
-#define OT_MSG_TYPE_S_UNKNOWN_DATAID	7
-
-#define OT_DATA_ID_SHIFT		16
-#define OT_DATA_ID_Status						0	//R-
-#define OT_DATA_ID_TSet							1	//-W
-#define OT_DATA_ID_MConfig_ID					2	//-W
-#define OT_DATA_ID_SConfig_ID					3	//R-
-#define OT_DATA_ID_Command						4	//
-#define OT_DATA_ID_ASFFlags_OEM_fault_code		5	//R-
-#define OT_DATA_ID_RBPFlags						6	//R-
-#define OT_DATA_ID_CoolingControl				7	//-W
-
-#define OT_DATA_ID_FHBIndex_FHBValue			13	//R-
-#define OT_DATA_ID_DHWFlowRate					19	//R-
-#define OT_DATA_ID_TBoiler						25	//R-
-
-const uint8_t convert_T[] = {
-                OW_0, OW_0, OW_1, OW_1, OW_0, OW_0, OW_1, OW_1, // 0xcc SKIP ROM
-                OW_0, OW_0, OW_1, OW_0, OW_0, OW_0, OW_1, OW_0  // 0x44 CONVERT
-};
-
-const uint8_t read_scratch[] = {
-                OW_0, OW_0, OW_1, OW_1, OW_0, OW_0, OW_1, OW_1, // 0xcc SKIP ROM
-                OW_0, OW_1, OW_1, OW_1, OW_1, OW_1, OW_0, OW_1, // 0xbe READ SCRATCH
-                OW_R, OW_R, OW_R, OW_R, OW_R, OW_R, OW_R, OW_R,
-                OW_R, OW_R, OW_R, OW_R, OW_R, OW_R, OW_R, OW_R
-};
-
-uint8_t scratch[sizeof(read_scratch)];
-
 uint32_t micros;
 
 uint8_t sim_tx[10];
 uint8_t sim_rx[10];
-
-//openterm
-//P MGS-TYPE SPARE DATA-ID  DATA-VALUE
-//0 000      0000  00000000 00000000 00000000
-unsigned long requests[] = {
-  0x300, //0 get status
-  //0x90014000, //1 set CH temp //64C
-  //0x80190000, //25 Boiler water temperature
-  0,
- ( (0x00000000) | ( ((long)3)<<16) ),
- ( (0x80000000) | ( ((long)5)<<16) ),
- ( (0x80000000) | ( ((long)6)<<16) ),
- ( (0x80000000) | ( ((long)9)<<16) ),
- ( (0x80000000) | ( ((long)10)<<16) ),
- ( (0x80000000) | ( ((long)12)<<16) ),
- ( (0x80000000) | ( ((long)13)<<16) ),//
- ( (0x80000000) | ( ((long)15)<<16) ),
- ( (0x80000000) | ( ((long)17)<<16) ),
- ( (0x80000000) | ( ((long)18)<<16) ),
- ( (0x80000000) | ( ((long)19)<<16) ),//
-  0x807c0000,
-};
-
-
-
 /* Private variables ---------------------------------------------------------*/
 ADC_ChannelConfTypeDef adcChannel;
 
@@ -167,40 +100,6 @@ typedef struct{
 }UART_Struct;
 UART_Struct RPi_UART;
 
-//DS18B20
-typedef struct{
-	uint16_t raw;
-	bool reset;
-	float out;
-}TEMP_Struct;
-TEMP_Struct temp;
-//P MGS-TYPE SPARE DATA-ID  DATA-VALUE
-//0 000      0000  00000000 00000000 00000000
-typedef struct {
-	//8
-	bool PARITY: 1;
-	uint8_t MSG_TYPE:3;
-	uint8_t SPARE:4;
-	//8
-	uint8_t DATA_ID:8;
-	//16
-	uint16_t DATA_VALUE:16;
-} OTFrameStruct;
-
-union OTFrameUnion {
-	uint32_t raw;
-	OTFrameStruct frame;
-} ;
-
-typedef struct{
-	union OTFrameUnion rx;
-	union OTFrameUnion tx;
-	uint32_t errorCount;
-	//OT_Frame_Struct reg[256];
-	uint32_t reg[20];
-}OT_Struct;
-OT_Struct ot;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -225,22 +124,6 @@ void StartAnalogADC1( uint32_t ch );
 int GetAnalogADC1( void );
 int ReadAnalogADC1( uint32_t ch );
 
-//OT
-void initOT(void);
-void setIdleState(void);
-void setActiveState(void);
-void activateBoiler(void);
-void sendBit(bool high);
-void sendFrame(uint32_t request);
-void printBinary(uint32_t val);
-uint32_t sendRequest(uint32_t request);
-bool waitForResponse();
-uint32_t readResponse();
-void delayMicros(uint32_t t);
-// one wire
-bool OWReset(void);
-void OWTransmit(void);
-void OWReceive(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -248,6 +131,12 @@ void OWReceive(void);
 {
 
 }*/
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	/*if(GPIO_Pin== GPIO_PIN_15 && ext){
+		//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+		ot.rx_ext.raw = (ot.rx_ext.raw << 1) | ~HAL_GPIO_ReadPin(OT_TXI_GPIO_Port,OT_TXI_Pin);
+	}*/
+//}
 /*void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
 	if (hspi->Instance==SPI2){
@@ -297,7 +186,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 }
 void HAL_SYSTICK_Callback(void){
 
-	  if(HAL_GetTick()%1000==0){
+	  if(HAL_GetTick()%200==0){
 		 // HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		  //SEND DATA OVER SPI TO RPi
 		  	/*HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_RESET);
@@ -314,6 +203,7 @@ void HAL_SYSTICK_Callback(void){
 		  	HAL_SPI_TransmitReceive(&hspi2, &RPi_SPI.tx_buff, &RPi_SPI.rx_buff, 3, 0x1000);
 		  	HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_SET);
 */
+
 
 	  }
 }
@@ -379,6 +269,16 @@ int main(void)
   RPi_SPI.tx_buff[2] = 0x0F;*/
   //HAL_SPI_
 
+  //temp.TransmitReceive = true;
+  //if( temp.TransmitReceive ){
+			OWTransmit();//HAL_UART_Transmit(&huart2,&convert_T,16,5000);
+			temp.TransmitReceive = false;
+		 // }else{
+			HAL_Delay(200);
+
+			OWReceive();
+			//temp.TransmitReceive = true;
+		  //}
   //OpenTherm init
   activateBoiler();
 
@@ -395,11 +295,7 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 
-		OWTransmit();//HAL_UART_Transmit(&huart2,&convert_T,16,5000);
 
-		HAL_Delay(200);
-
-		OWReceive();
 
 	  RPi_SPI.tx_buff[2] = temp.raw;
 
@@ -437,9 +333,32 @@ int main(void)
 
 	  ///OT
 	  for (int index = 0; index < (sizeof(requests) / sizeof(unsigned long)); index++) {
-	    ot.reg[index] = sendRequest(requests[index]);
+		  ot.tx.raw = requests[index];
+		  //ot.tx.raw = 0;
+		  //ot.tx.frame.DATA_ID = req[index];
+		  //ot.tx.frame.PARITY = checkParity( ot.tx.raw );
+
+	    ot.reg[index] = sendRequest( requests[index] );
+
+
+	    ot.rx.frame.DATA_ID;
+	    ot.rx.frame.DATA_VALUE;
+	    ot.rx.frame.MSG_TYPE;
+	    ot.rx.frame.PARITY;
+	    ot.rx.frame.SPARE;
+	    //parity = checkParity( ot.rx.raw & 0x7FFFFFFF ) != ot.rx.frame.PARITY;
+
+	    ot.tx.frame.DATA_ID;
+	    ot.tx.frame.DATA_VALUE;
+	    ot.tx.frame.MSG_TYPE;
+	    ot.tx.frame.PARITY;
+	    ot.tx.frame.SPARE;
+
+	    parity = checkParity( ot.tx.raw ) == ot.tx.frame.PARITY;
+	    //if(parity)
+	    	//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 	    HAL_Delay(300);
-	    HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+	    //HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 	  }
 
 
@@ -448,14 +367,14 @@ int main(void)
 	  			//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//
 
-	 while(1){
+	 /*while(1){
 		  for (int index = 0; index < 500; index++)
 			  delayMicros(1000);
 		  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		  for (int index = 0; index < 500; index++)
 			  delayMicros(1000);
 		  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-	  }
+	  }*/
   }
   /* USER CODE END 3 */
 
@@ -649,7 +568,7 @@ static void MX_TIM4_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 64;
+  htim4.Init.Prescaler = 32;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim4.Init.Period = 65000;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -824,206 +743,7 @@ int ReadAnalogADC1( uint32_t ch ){
 }
 
 
-//1 wire
-bool OWReset(void){
-	uint8_t tx = 0xf0;
-	uint8_t rx = 0;
 
-	huart2.Instance = USART2;
-	huart2.Init.BaudRate = 9600;
-	huart2.Init.WordLength = UART_WORDLENGTH_8B;
-	huart2.Init.StopBits = UART_STOPBITS_1;
-	huart2.Init.Parity = UART_PARITY_NONE;
-	huart2.Init.Mode = UART_MODE_TX_RX;
-	huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-	huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-	if (HAL_UART_Init(&huart2) != HAL_OK)
-	{
-	  _Error_Handler(__FILE__, __LINE__);
-	}
-
-	huart2.Instance->DR = tx;
-	HAL_Delay(10);
-	rx = huart2.Instance->DR;
-
-
-	huart2.Instance = USART2;
-	huart2.Init.BaudRate = 115200;
-	huart2.Init.WordLength = UART_WORDLENGTH_8B;
-	huart2.Init.StopBits = UART_STOPBITS_1;
-	huart2.Init.Parity = UART_PARITY_NONE;
-	huart2.Init.Mode = UART_MODE_TX_RX;
-	huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-	huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-	if (HAL_UART_Init(&huart2) != HAL_OK)
-	{
-	  _Error_Handler(__FILE__, __LINE__);
-	}
-
-	if(rx==0xf0)
-		return false;
-
-	return true;
-}
-
-void OWTransmit(void){
-	temp.reset = OWReset();
-	if(temp.reset) HAL_UART_Transmit(&huart2,&convert_T,16,5000);
-}
-void OWReceive(void){
-	uint8_t rx=0;
-	uint8_t i=0;
-
-	temp.reset = OWReset();
-	if( temp.reset ){
-		temp.raw = 0;
-				HAL_UART_Transmit(&huart2,&read_scratch,16,5000);
-
-				for(i=0;i<16;i++){
-					huart2.Instance->DR = 0xff;
-					HAL_Delay(10);
-					rx = huart2.Instance->DR;
-
-					if (rx == 0xff) {
-						temp.raw = (temp.raw>>1) | 0x8000;
-					} else {
-						temp.raw = temp.raw>>1;
-					}
-				}
-				//HAL_UART_Receive(&huart2,&scratch,16,2000);
-				//HAL_UART_*/
-				HAL_Delay(1);
-				temp.out = (temp.out + (int)(temp.raw>>4) )/2;
-			}
-}
-
-//OT
-void initOT(void){
-
-}
-void setIdleState(void){
-	HAL_GPIO_WritePin(OT_RXO_GPIO_Port, OT_RXO_Pin, GPIO_PIN_SET);
-}
-void setActiveState(void){
-	HAL_GPIO_WritePin(OT_RXO_GPIO_Port, OT_RXO_Pin, GPIO_PIN_RESET);
-}
-void activateBoiler(void){
-	setIdleState();
-	HAL_Delay(1000);
-}
-void sendBit(bool high){
-	  if (high) setActiveState(); else setIdleState();
-	  delayMicros(500);
-	  if (high) setIdleState(); else setActiveState();
-	  delayMicros(500);
-}
-void sendFrame(uint32_t request){
-	  sendBit(true); //start bit
-	  for (int i = 31; i >= 0; i--) {
-	    sendBit( (request>>i & 1) );//bitRead(request, i));
-	  }
-	  sendBit(true); //stop bit
-	  setIdleState();
-}
-void printBinary(uint32_t val);
-uint32_t sendRequest(uint32_t request){
-	sendFrame(request);
-
-	  if (!waitForResponse()) return 0;
-
-	  return readResponse();
-}
-bool waitForResponse(){
-	uint32_t time_stamp = HAL_GetTick();
-	  while (HAL_GPIO_ReadPin(OT_TXI_GPIO_Port,OT_TXI_Pin) != GPIO_PIN_SET) { //start bit
-	    if (HAL_GetTick() - time_stamp >= 1000) {
-	      //Serial.println("Response timeout");
-	      return false;
-	    }
-	  }
-	  delayMicros(1000 * 1.25); //wait for first bit
-	  return true;
-}
-uint32_t readResponse(){
-	  unsigned long response = 0;
-	  for (int i = 0; i < 32; i++) {
-	    response = (response << 1) | HAL_GPIO_ReadPin(OT_TXI_GPIO_Port,OT_TXI_Pin);// digitalRead(OT_IN_PIN);
-	    delayMicros(1000);
-	  }
-
-	  union OTFrameUnion re;
-	  re.raw = response;
-	  re.frame.DATA_ID;
-	  re.frame.DATA_VALUE;
-	  re.frame.MSG_TYPE;
-	  re.frame.PARITY;
-	  re.frame.SPARE;
-	  //Serial.print("Response: ");
-	  //printBinary(response);
-	 // Serial.print(" / ");
-	  //Serial.print(response, HEX);
-	 // Serial.println();
-
-	 /* if ((response >> 16 & 0xFF) == 25) {
-	    Serial.print("t=");
-	    Serial.print(response >> 8 & 0xFF);
-	    Serial.println("");
-	  }*/
-	  return response;
-}
-
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
-
-void delayMicros(uint32_t t){
-	  //uint32_t tickstart = micros;
-	//volatile uint32_t wait = t*5;
-
-	TIM4->ARR = t;
-	HAL_TIM_Base_Start(&htim4);
-	TIM4->ARR = t;
-	  /*uint32_t end = micros+t;
-*/
-	 // if(tickstart+wait>UINT32_MAX)
-	  /* Add a freq to guarantee minimum wait */
-	  /*if (wait < HAL_MAX_DELAY)
-	  {
-	    wait += (uint32_t)(uwTickFreq);
-	  }*/
-
-
-	 /* while ( micros  < end)
-	  {
-	  }*/
-	while (TIM4->CNT < TIM4->ARR){
-
-	}
-	HAL_TIM_Base_Stop(&htim4);
-	/*volatile uint32_t DWT_START = DWT->CYCCNT;
-	  // keep DWT_TOTAL from overflowing (max 59.652323s w/72MHz SystemCoreClock)
-	  if (t > (UINT32_MAX / 64))
-	  {
-	    t = (UINT32_MAX / 64);
-	  }
-
-	  volatile uint32_t DWT_TOTAL = (64 * t);
-
-	  while((DWT->CYCCNT - DWT_START) < DWT_TOTAL)
-	  {
-	    //HAL_Notify_WDT();
-	  }*/
-}
-
-#pragma GCC pop_options
-
-bool checkParity(uint32_t val) {
-  val ^= val >> 16;
-  val ^= val >> 8;
-  val ^= val >> 4;
-  val ^= val >> 2;
-  val ^= val >> 1;
-  return (~val) & 1;
-}
 
 /* USER CODE END 4 */
 
