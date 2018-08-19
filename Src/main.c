@@ -282,8 +282,12 @@ int main(void)
   //OpenTherm init
   activateBoiler();
 
+ /* HAL_FLASH_Unlock();
+  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD,0x08010000,0xAAAAAAAA);
+  HAL_FLASH_Lock();*/
+  uint32_t counter2 = *(__IO uint32_t *)0x08010004;
 
-
+  counter2;
   /* USER CODE END 2 */
 
   /* Infinite loop */
