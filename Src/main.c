@@ -95,10 +95,21 @@ SPI_Struct RPi_SPI;
 typedef struct{
 	uint16_t address;
 	uint8_t data;
-	uint8_t rx_buff[8];
-	uint8_t tx_buff[8];
+	uint8_t rx_buff[10];
+	uint8_t tx_buff[10];
 }UART_Struct;
 UART_Struct RPi_UART;
+
+typedef struct {
+	uint16_t address:16;
+	uint16_t data:16;
+} RPiFrameStruct;
+
+union RPiFrameUnion {
+	uint8_t raw[4];
+	RPiFrameStruct frame;
+} ;
+
 
 /* USER CODE END PV */
 
@@ -175,10 +186,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart->Instance==USART3){
-		if(RPi_UART.rx_buff[0]=='H' && RPi_UART.rx_buff[1]=='e' && RPi_UART.rx_buff[2]=='l'){
-			//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+
+		union RPiFrameUnion frame = {0};
+		for (int i=0;i<4;i++)
+			frame.raw[i] = RPi_UART.rx_buff[i];
+
+		if( frame.frame.address == 1 ){
+			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+			frame.frame.data = 0x00FF;
 		}
-		HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,3);
+		if(RPi_UART.rx_buff[0]=='H' && RPi_UART.rx_buff[1]=='e' && RPi_UART.rx_buff[2]=='l'){
+			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+		}
+		if(RPi_UART.rx_buff[0]=='t' && RPi_UART.rx_buff[1]=='m' && RPi_UART.rx_buff[2]=='p'){
+			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+			//RPi_UART.tx_buff
+		}
+		HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,4);
 	}
 	if (huart->Instance==USART1){
 		HAL_UART_Receive_IT(&huart1,sim_rx,4);
@@ -260,7 +284,7 @@ int main(void)
   //HAL_TIM_Base_Stop_IT(&htim4);
   initADC();
   //HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
-  HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,3);
+  HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,4);
   HAL_UART_Receive_IT(&huart1,sim_rx,4);
   /*RPi_SPI.rxed = 0;
 
@@ -288,6 +312,13 @@ int main(void)
   uint32_t counter2 = *(__IO uint32_t *)0x08010004;
 
   counter2;
+  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+
+
+  /*frame.raw[0] = 2;
+  frame.raw[2] = 0xAA;
+  frame.frame.data[0];
+  frame.frame.address;*/
   /* USER CODE END 2 */
 
   /* Infinite loop */
