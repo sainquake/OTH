@@ -93,6 +93,7 @@ typedef struct{
 SPI_Struct RPi_SPI;
 
 typedef struct{
+	bool transmitRequered;
 	uint16_t address;
 	uint8_t data;
 	uint8_t rx_buff[10];
@@ -101,7 +102,8 @@ typedef struct{
 UART_Struct RPi_UART;
 
 typedef struct {
-	uint16_t address:16;
+	bool read:1;
+	uint16_t address:15;
 	uint16_t data:16;
 } RPiFrameStruct;
 
@@ -109,6 +111,7 @@ union RPiFrameUnion {
 	uint8_t raw[4];
 	RPiFrameStruct frame;
 } ;
+union RPiFrameUnion rpiframe = {0};
 
 
 /* USER CODE END PV */
@@ -187,14 +190,43 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart->Instance==USART3){
 
-		union RPiFrameUnion frame = {0};
+		//frame = {0};
 		for (int i=0;i<4;i++)
-			frame.raw[i] = RPi_UART.rx_buff[i];
+			rpiframe.raw[i] = RPi_UART.rx_buff[i];
 
-		if( frame.frame.address == 1 ){
+		switch(rpiframe.frame.address){
+		case 1:
 			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-			frame.frame.data = 0x00FF;
+			//frame.frame.address = 1;
+			//if(!frame.frame.read)
+				for (int i=0;i<4;i++)
+					RPi_UART.tx_buff[i] = rpiframe.raw[i];
+			//else
+			//	for (int i=0;i<4;i++)
+			//		RPi_UART.tx_buff[i] = 0;
+			RPi_UART.transmitRequered = true;
+			break;
+		case 2:
+			ot.RPiRequestHI = rpiframe.frame.data;
+			break;
+		case 3:
+			ot.RPiRequestLO = rpiframe.frame.data;
+			break;
+		case 4:
+
+			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+			//ot.RPiResponseHI = frame.frame.data;
+			break;
+		case 5:
+
+			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+			//ot.RPiResponseLO= frame.frame.data;
+			break;
+		case 6:
+			//ot.RPiRequestHI = frame.frame.data;
+			break;
 		}
+
 		if(RPi_UART.rx_buff[0]=='H' && RPi_UART.rx_buff[1]=='e' && RPi_UART.rx_buff[2]=='l'){
 			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		}
@@ -285,6 +317,7 @@ int main(void)
   initADC();
   //HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
   HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,4);
+  RPi_UART.transmitRequered = false;
   HAL_UART_Receive_IT(&huart1,sim_rx,4);
   /*RPi_SPI.rxed = 0;
 
@@ -360,14 +393,18 @@ int main(void)
 		  //HAL_SPI_Receive_IT(&hspi2, &RPi_SPI.rx_buff, 3);
 		  //HAL_SPI_TransmitReceive_IT(&hspi2, &RPi_SPI.tx_buff,&RPi_SPI.rx_buff, 3);
 	  }*/
-	  sim_tx[0] = 'A';
+	  /*sim_tx[0] = 'A';
 	  sim_tx[1] = 'T';
 	  sim_tx[2] = '\r';
-	  sim_tx[3] = '\n';
+	  sim_tx[3] = '\n';*/
 	  //HAL_UART_Transmit(&huart1,&sim_tx,4,5000);
+	  if(RPi_UART.transmitRequered){
+		  HAL_UART_Transmit(&huart3,RPi_UART.tx_buff,4,1000);
+		  RPi_UART.transmitRequered = false;
+	  }
 
 	  ///OT
-	  for (int index = 0; index < (sizeof(requests) / sizeof(unsigned long)); index++) {
+	  /*for (int index = 0; index < (sizeof(requests) / sizeof(unsigned long)); index++) {
 		  ot.tx.raw = requests[index];
 		  //ot.tx.raw = 0;
 		  //ot.tx.frame.DATA_ID = req[index];
@@ -375,7 +412,25 @@ int main(void)
 
 	    ot.reg[index] = sendRequest( requests[index] );
 
-
+	    if(		checkParity( ot.rx.raw )== ot.rx.frame.PARITY &&
+	    		(ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_READ_ACK ||
+				ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_WRITE_ACK)
+				){
+	    	dv.raw = ot.rx.frame.DATA_VALUE;
+			if(ot.rx.frame.DATA_ID==0 ){
+				OTDR.ID0 = dv.ID0;
+			}
+			if(ot.rx.frame.DATA_ID==3 ){
+				OTDR.ID3 = dv.ID3;
+			}
+			if(ot.rx.frame.DATA_ID==5 ){
+				OTDR.ID5 = dv.ID5;
+			}
+			if(ot.rx.frame.DATA_ID==125 )
+				OTDR.ID125 = dv.ID125;
+			if(ot.rx.frame.DATA_ID==127 )
+				OTDR.ID127 = dv.ID127;
+	    }
 	    ot.rx.frame.DATA_ID;
 	    ot.rx.frame.DATA_VALUE;
 	    ot.rx.frame.MSG_TYPE;
@@ -397,7 +452,7 @@ int main(void)
 	  }
 
 
-	  HAL_Delay(300);
+	  HAL_Delay(300);*/
 	  //if(htim4.==0)
 	  			//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//

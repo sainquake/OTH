@@ -60,6 +60,7 @@ unsigned long requests[] = {
  ( (0x80000000) | ( ((long)19)<<16) ),//
  ( (0x00000000) | ( ((long)24)<<16) ),//
   0x807c0000,
+ ( (0x00000000) | ( ((long)125)<<16) ),//
  ( (0x80000000) | ( ((long)127)<<16) ),//
 };
 
@@ -86,6 +87,10 @@ union OTFrameUnion {
 } ;
 
 typedef struct{
+	uint16_t RPiRequestHI;
+	uint16_t RPiRequestLO;
+	uint16_t RPiResponseHI;
+	uint16_t RPiResponseLO;
 	union OTFrameUnion rx;
 	union OTFrameUnion rx_ext;
 	union OTFrameUnion tx;
@@ -98,6 +103,87 @@ OT_Struct ot;
 bool parity;
 bool ext = false;
 
+typedef struct {
+	//LB
+	bool faultIndication:1;
+	bool CHMode:1;
+	bool DHWMode:1;
+	bool FlameStatus:1;
+	bool CoolingStatus:1;
+	bool CH2Status:1;
+	bool diagnosticIndication:1;
+	bool reserved:1;
+	//HB
+	bool CHEnable:1;
+	bool DHWEnable:1;
+	bool CoolingEnable:1;
+	bool OTCActive:1;
+	bool CH2Enable:1;
+	uint8_t reservedHB:3;
+} OTDataValueID0Struct;
+
+typedef struct {
+	uint16_t controlSetpoint;
+} OTDataValueF88Struct;
+
+typedef struct {
+	//LB
+	uint8_t SlaveMemberID:8;
+	//HB
+	bool DHWPresent:1;
+	bool ControlType:1;
+	bool CoolingConfig:1;
+	bool DHWConfig:1;
+	bool MasterLowOff:1;
+	bool CH2Present:1;
+	uint8_t reservedHB:2;
+} OTDataValueID3Struct;
+
+typedef struct {
+	//LB
+	uint8_t OEMFaultCode:8;
+	//HB
+	bool ServiceRequered:1;
+	bool LockoutReset:1;
+	bool LowWaterPressure:1;
+	bool GasFlameFault:1;
+	bool AirPressureFault:1;
+	bool WaterOverTemp:1;
+	uint8_t reservedHB:2;
+} OTDataValueID5Struct;
+typedef struct {
+	//LB
+	uint8_t productVersion:8;
+	//HB
+	uint8_t productType:8;
+} OTDataValueID126and127Struct;
+
+union OTDataValueUnion{
+	uint16_t raw;
+	OTDataValueID0Struct ID0;
+	OTDataValueF88Struct ID1;
+	OTDataValueID3Struct ID3;
+	OTDataValueID5Struct ID5;
+	OTDataValueF88Struct ID8;
+	OTDataValueF88Struct ID124;
+	OTDataValueF88Struct ID125;
+	OTDataValueID126and127Struct ID126;
+	OTDataValueID126and127Struct ID127;
+};
+typedef struct{
+	OTDataValueID0Struct ID0;
+	OTDataValueF88Struct ID1;
+	OTDataValueID3Struct ID3;
+	OTDataValueID5Struct ID5;
+	OTDataValueF88Struct ID8;
+	OTDataValueF88Struct ID124;
+	OTDataValueF88Struct ID125;
+	OTDataValueID126and127Struct ID126;
+	OTDataValueID126and127Struct ID127;
+} OTDataRegistersStruct;
+OTDataRegistersStruct OTDR;
+
+union OTDataValueUnion dv = {0};
 //OT
 void initOT(void);
 void setIdleState(void);
