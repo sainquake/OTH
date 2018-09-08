@@ -43,6 +43,7 @@
 #include <stdbool.h>
 #include "OT.h"
 #include "DS18B20.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -100,6 +101,18 @@ typedef struct{
 	uint8_t tx_buff[10];
 }UART_Struct;
 UART_Struct RPi_UART;
+
+typedef struct{
+	char* TX;
+	uint8_t rx_buff[10];
+	uint8_t tx_buff[64];
+	uint8_t RX[128];
+	char RXEcho[128];
+	char RXResponse[128];
+	uint8_t index;
+	uint8_t readIndex;
+}SIM800_Struct;
+SIM800_Struct gprs;
 
 typedef struct {
 	bool read:1;
@@ -237,7 +250,21 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,4);
 	}
 	if (huart->Instance==USART1){
-		HAL_UART_Receive_IT(&huart1,sim_rx,4);
+
+		for(int i=0;i<2;i++){
+			if(gprs.rx_buff[i]!='\0'){
+				gprs.RX[gprs.index] = gprs.rx_buff[i];
+				if(gprs.index==127){//gprs.index>0 && gprs.RX[gprs.index-1]=='\r' && gprs.RX[gprs.index]=='\n'){
+
+					//for(int n=0;n<gprs.index;n++)
+						//gprs.RXResponse[n] = gprs.RX[n];
+					gprs.index=0;
+				}else{
+					gprs.index++;
+				}
+			}
+		}
+		HAL_UART_Receive_IT(&huart1,gprs.rx_buff,2);
 	}
 }
 void HAL_SYSTICK_Callback(void){
@@ -318,7 +345,7 @@ int main(void)
   //HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
   HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,4);
   RPi_UART.transmitRequered = false;
-  HAL_UART_Receive_IT(&huart1,sim_rx,4);
+  HAL_UART_Receive_IT(&huart1,gprs.rx_buff,2);
   /*RPi_SPI.rxed = 0;
 
   RPi_SPI.tx_buff[0] = 0x0A;b
@@ -352,6 +379,28 @@ int main(void)
   frame.raw[2] = 0xAA;
   frame.frame.data[0];
   frame.frame.address;*/
+  gprs.index=0;
+  gprs.readIndex=0;
+
+  gprs.TX = "AT\r\n";
+  HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
+  HAL_Delay(3000);
+
+  /*gprs.TX = "AT+CREG?\r";
+  HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
+  HAL_Delay(3000);*/
+
+  gprs.TX = "AT+CMGF=1\r\n";
+  HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
+  HAL_Delay(3000);
+
+  gprs.TX = "AT+CMGS=\"+79063280423\"\r\n";
+  HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
+  HAL_Delay(1000);
+
+  gprs.TX = "msg\x1a";
+  HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
+  HAL_Delay(1000);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -364,6 +413,7 @@ int main(void)
   /* USER CODE BEGIN 3 */
 
 
+	  HAL_Delay(1000);
 
 	  RPi_SPI.tx_buff[2] = temp.raw;
 
@@ -393,11 +443,8 @@ int main(void)
 		  //HAL_SPI_Receive_IT(&hspi2, &RPi_SPI.rx_buff, 3);
 		  //HAL_SPI_TransmitReceive_IT(&hspi2, &RPi_SPI.tx_buff,&RPi_SPI.rx_buff, 3);
 	  }*/
-	  /*sim_tx[0] = 'A';
-	  sim_tx[1] = 'T';
-	  sim_tx[2] = '\r';
-	  sim_tx[3] = '\n';*/
-	  //HAL_UART_Transmit(&huart1,&sim_tx,4,5000);
+
+
 	  if(RPi_UART.transmitRequered){
 		  HAL_UART_Transmit(&huart3,RPi_UART.tx_buff,4,1000);
 		  RPi_UART.transmitRequered = false;
