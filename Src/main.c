@@ -103,16 +103,27 @@ typedef struct{
 UART_Struct RPi_UART;
 
 typedef struct{
+	bool transmitRequered;
+	bool waitForResponse;
 	char* TX;
-	uint8_t rx_buff[10];
-	uint8_t tx_buff[64];
-	uint8_t RX[128];
+	char rx_buff[10];
+	char tx_buff[64];
+	char *RX;
 	char RXEcho[128];
 	char RXResponse[128];
 	uint8_t index;
 	uint8_t readIndex;
+
 }SIM800_Struct;
 SIM800_Struct gprs;
+
+int quality = 0;
+const char *a[10] = {
+		"AT",
+		"AT+CSQ",
+		"ATI",
+		"AT+CBC"
+};
 
 typedef struct {
 	bool read:1;
@@ -250,24 +261,100 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,4);
 	}
 	if (huart->Instance==USART1){
-
 		for(int i=0;i<2;i++){
 			if(gprs.rx_buff[i]!='\0'){
-				gprs.RX[gprs.index] = gprs.rx_buff[i];
-				if(gprs.index==127){//gprs.index>0 && gprs.RX[gprs.index-1]=='\r' && gprs.RX[gprs.index]=='\n'){
+
+			    size_t len = strlen(gprs.RX);
+			    char *str2 = malloc(len + 1 + 1 ); /* one for extra char, one for trailing zero */
+			    strcpy(str2, gprs.RX);
+			    str2[len] = gprs.rx_buff[i];
+			    str2[len + 1] = '\0';
+
+			    gprs.RX = str2;
+			    free(str2);
+
+				//gprs.RX += 'a'+gprs.rx_buff[i];
+				/*if(gprs.index==127){//gprs.index>0 && gprs.RX[gprs.index-1]=='\r' && gprs.RX[gprs.index]=='\n'){
 
 					//for(int n=0;n<gprs.index;n++)
 						//gprs.RXResponse[n] = gprs.RX[n];
 					gprs.index=0;
 				}else{
 					gprs.index++;
-				}
+				}*/
 			}
 		}
 		HAL_UART_Receive_IT(&huart1,gprs.rx_buff,2);
 	}
 }
+int strpos(char *hay, char *needle, int offset)
+{
+   char haystack[strlen(hay)];
+   strncpy(haystack, hay+offset, strlen(hay)-offset);
+   char *p = strstr(haystack, needle);
+   if (p)
+      return p - haystack+offset;
+   return -1;
+}
+
 void HAL_SYSTICK_Callback(void){
+
+	//int index=strstr(gprs.RX,gprs.TX)-gprs.RX;
+	/*char* str2;
+	strcpy (str2,gprs.TX);
+	if(strpos(gprs.RX,str2,0)>=0)
+		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);*/
+
+
+
+	if(strlen(gprs.RX)>0){
+		char * found = strstr(gprs.RX,"OK"); /* should return 0x18 */
+		if (found != NULL)                     /* strstr returns NULL if item not found */
+		{
+		  int index = found - gprs.RX;          /* index is 8 */
+											   /* source[8] gets you "i" */
+		  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+		  gprs.waitForResponse = false;
+
+		  //gprs.RX = "";
+		  gprs.index++;
+		  if(gprs.index>5)
+			  gprs.index=0;
+
+		  if(strpos(gprs.RX,"+COPS?",0)>0){
+			  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+			  //printf("+CSQ");
+			  //char *token = strtok(gprs.RX, "+CSQ: ");
+			 // quality = strtol(gprs.RX, ',', 10);
+		  }
+		  gprs.RX = "";
+		  //strcpy(gprs.TX,a[gprs.index]);
+		  switch(gprs.index){
+		  case 0:
+			  gprs.TX = "AT\r\n";
+			  break;
+		  case 1:
+			  gprs.TX = "AT+CFUN=1\r\n";
+			  break;
+		  case 2:
+			  gprs.TX = "AT+CSQ\r\n";
+			  break;
+		  case 3:
+			  gprs.TX = "AT+CREG=1\r\n";
+			  break;
+		  case 4:
+			  gprs.TX = "AT+CREG?\r\n";
+			  break;
+		  case 5:
+			  gprs.TX = "AT+COPS?\r\n";
+			  break;
+		  }
+		  gprs.transmitRequered = true;
+		}
+	}
+	//strstr( gprs.RX, "in" );
+
+	//if(index>=0)
 
 	  if(HAL_GetTick()%200==0){
 		 // HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
@@ -346,6 +433,9 @@ int main(void)
   HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,4);
   RPi_UART.transmitRequered = false;
   HAL_UART_Receive_IT(&huart1,gprs.rx_buff,2);
+  gprs.RX = "";
+  gprs.transmitRequered = false;
+  gprs.waitForResponse = false;
   /*RPi_SPI.rxed = 0;
 
   RPi_SPI.tx_buff[0] = 0x0A;b
@@ -383,14 +473,26 @@ int main(void)
   gprs.readIndex=0;
 
   gprs.TX = "AT\r\n";
-  HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
-  HAL_Delay(3000);
+  gprs.transmitRequered = true;
+  gprs.waitForResponse = true;
+  /*while(gprs.waitForResponse){
+
+  }
+
+  gprs.TX = "AT\r\n";
+  gprs.transmitRequered = true;
+  gprs.waitForResponse = true;
+  while(gprs.waitForResponse){
+
+  }*/
+  /*HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
+  HAL_Delay(3000);*/
 
   /*gprs.TX = "AT+CREG?\r";
   HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
   HAL_Delay(3000);*/
 
-  gprs.TX = "AT+CMGF=1\r\n";
+ /* gprs.TX = "AT+CMGF=1\r\n";
   HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
   HAL_Delay(3000);
 
@@ -400,7 +502,7 @@ int main(void)
 
   gprs.TX = "msg\x1a";
   HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
-  HAL_Delay(1000);
+  HAL_Delay(1000);*/
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -412,8 +514,16 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 
+	  if(gprs.transmitRequered){
+		  //gprs.TX = "AT\r\n";
 
-	  HAL_Delay(1000);
+		  HAL_Delay(1000);
+		  HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
+		  gprs.transmitRequered = false;
+		  gprs.waitForResponse = true;
+	  }
+
+	  //HAL_Delay(1000);
 
 	  RPi_SPI.tx_buff[2] = temp.raw;
 
@@ -449,6 +559,7 @@ int main(void)
 		  HAL_UART_Transmit(&huart3,RPi_UART.tx_buff,4,1000);
 		  RPi_UART.transmitRequered = false;
 	  }
+
 
 	  ///OT
 	  /*for (int index = 0; index < (sizeof(requests) / sizeof(unsigned long)); index++) {
