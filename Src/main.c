@@ -126,8 +126,7 @@ const char *a[10] = {
 };
 
 typedef struct {
-	bool read:1;
-	uint16_t address:15;
+	uint16_t address:16;
 	uint16_t data:16;
 } RPiFrameStruct;
 
@@ -248,6 +247,20 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			break;
 		case 6:
 			//ot.RPiRequestHI = frame.frame.data;
+			break;
+		case 10:
+			OTCommon.targetTemp = rpiframe.frame.data;
+			//rpiframe.frame.data = 1;
+			for (int i=0;i<4;i++)
+				RPi_UART.tx_buff[i] = rpiframe.raw[i];
+
+			RPi_UART.transmitRequered = true;
+			break;
+		case 11:
+			rpiframe.frame.data = temp.out;
+			for (int i=0;i<4;i++)
+				RPi_UART.tx_buff[i] = rpiframe.raw[i];
+			RPi_UART.transmitRequered = true;
 			break;
 		}
 
@@ -513,6 +526,13 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+
+		OWTransmit();//HAL_UART_Transmit(&huart2,&convert_T,16,5000);
+		temp.TransmitReceive = false;
+	 // }else{
+		HAL_Delay(200);
+
+		OWReceive();
 
 	  if(gprs.transmitRequered){
 		  //gprs.TX = "AT\r\n";

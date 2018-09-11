@@ -68,6 +68,11 @@ uint8_t req[] = {
 		3,5,6,9,10,12,13,15,17,18,19,24,124,127
 };
 
+typedef struct {
+	uint16_t targetTemp;
+} OTCommonStruct;
+OTCommonStruct OTCommon;
+
 //P MGS-TYPE SPARE DATA-ID  DATA-VALUE
 //0 000      0000  00000000 00000000 00000000
 typedef struct {
