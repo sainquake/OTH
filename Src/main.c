@@ -43,6 +43,7 @@
 #include <stdbool.h>
 #include "OT.h"
 #include "DS18B20.h"
+#include "RPi.h"
 #include <string.h>
 /* USER CODE END Includes */
 
@@ -85,24 +86,6 @@ typedef struct{
 ADC_Struct adc;
 
 typedef struct{
-	uint16_t address;
-	uint8_t data;
-	uint8_t rx_buff[10];
-	uint8_t tx_buff[10];
-	char 	rxed;
-}SPI_Struct;
-SPI_Struct RPi_SPI;
-
-typedef struct{
-	bool transmitRequered;
-	uint16_t address;
-	uint8_t data;
-	uint8_t rx_buff[10];
-	uint8_t tx_buff[10];
-}UART_Struct;
-UART_Struct RPi_UART;
-
-typedef struct{
 	bool transmitRequered;
 	bool waitForResponse;
 	char* TX;
@@ -124,18 +107,6 @@ const char *a[10] = {
 		"ATI",
 		"AT+CBC"
 };
-
-typedef struct {
-	uint16_t address:16;
-	uint16_t data:16;
-} RPiFrameStruct;
-
-union RPiFrameUnion {
-	uint8_t raw[4];
-	RPiFrameStruct frame;
-} ;
-union RPiFrameUnion rpiframe = {0};
-
 
 /* USER CODE END PV */
 
@@ -212,66 +183,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart->Instance==USART3){
-
-		//frame = {0};
-		for (int i=0;i<4;i++)
-			rpiframe.raw[i] = RPi_UART.rx_buff[i];
-
-		switch(rpiframe.frame.address){
-		case 1:
-			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-			//frame.frame.address = 1;
-			//if(!frame.frame.read)
-				for (int i=0;i<4;i++)
-					RPi_UART.tx_buff[i] = rpiframe.raw[i];
-			//else
-			//	for (int i=0;i<4;i++)
-			//		RPi_UART.tx_buff[i] = 0;
-			RPi_UART.transmitRequered = true;
-			break;
-		case 2:
-			ot.RPiRequestHI = rpiframe.frame.data;
-			break;
-		case 3:
-			ot.RPiRequestLO = rpiframe.frame.data;
-			break;
-		case 4:
-
-			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-			//ot.RPiResponseHI = frame.frame.data;
-			break;
-		case 5:
-
-			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-			//ot.RPiResponseLO= frame.frame.data;
-			break;
-		case 6:
-			//ot.RPiRequestHI = frame.frame.data;
-			break;
-		case 10:
-			OTCommon.targetTemp = rpiframe.frame.data;
-			//rpiframe.frame.data = 1;
-			for (int i=0;i<4;i++)
-				RPi_UART.tx_buff[i] = rpiframe.raw[i];
-
-			RPi_UART.transmitRequered = true;
-			break;
-		case 11:
-			rpiframe.frame.data = temp.out;
-			for (int i=0;i<4;i++)
-				RPi_UART.tx_buff[i] = rpiframe.raw[i];
-			RPi_UART.transmitRequered = true;
-			break;
-		}
-
-		if(RPi_UART.rx_buff[0]=='H' && RPi_UART.rx_buff[1]=='e' && RPi_UART.rx_buff[2]=='l'){
-			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-		}
-		if(RPi_UART.rx_buff[0]=='t' && RPi_UART.rx_buff[1]=='m' && RPi_UART.rx_buff[2]=='p'){
-			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-			//RPi_UART.tx_buff
-		}
-		HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,4);
+        RPiRXRoute();
 	}
 	if (huart->Instance==USART1){
 		for(int i=0;i<2;i++){
@@ -369,7 +281,8 @@ void HAL_SYSTICK_Callback(void){
 
 	//if(index>=0)
 
-	  if(HAL_GetTick()%200==0){
+      if(HAL_GetTick()%200==0)
+              OWTick200();
 		 // HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		  //SEND DATA OVER SPI TO RPi
 		  	/*HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_RESET);
@@ -388,7 +301,7 @@ void HAL_SYSTICK_Callback(void){
 */
 
 
-	  }
+     // }
 }
 /* USER CODE END 0 */
 
@@ -458,12 +371,14 @@ int main(void)
 
   //temp.TransmitReceive = true;
   //if( temp.TransmitReceive ){
+ /* temp.busy = true;
 			OWTransmit();//HAL_UART_Transmit(&huart2,&convert_T,16,5000);
 			temp.TransmitReceive = false;
 		 // }else{
 			HAL_Delay(200);
 
-			OWReceive();
+            OWReceive();*/
+  OWInit();
 			//temp.TransmitReceive = true;
 		  //}
   //OpenTherm init
@@ -527,12 +442,13 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 
-		OWTransmit();//HAL_UART_Transmit(&huart2,&convert_T,16,5000);
+        /*OWTransmit();//HAL_UART_Transmit(&huart2,&convert_T,16,5000);
 		temp.TransmitReceive = false;
 	 // }else{
 		HAL_Delay(200);
 
-		OWReceive();
+        OWReceive();*/
+          OWRoute();
 
 	  if(gprs.transmitRequered){
 		  //gprs.TX = "AT\r\n";
@@ -581,7 +497,7 @@ int main(void)
 	  }
 
 
-	  ///OT
+      //OT
 	  /*for (int index = 0; index < (sizeof(requests) / sizeof(unsigned long)); index++) {
 		  ot.tx.raw = requests[index];
 		  //ot.tx.raw = 0;
@@ -972,6 +888,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 void initADC(void){
 	adcChannel.Channel = ADC_CHANNEL_0;//B
 	adcChannel.Rank = 1;

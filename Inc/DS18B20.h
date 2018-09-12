@@ -38,16 +38,44 @@ typedef struct{
 	bool reset;
 	float out;
 	bool TransmitReceive;
+    bool busy;
+    bool transmitInProgress;
+    bool receiveInProgress;
 }TEMP_Struct;
 TEMP_Struct temp;
 
 // one wire
+void OWInit(void);
 bool OWReset(void);
 void OWTransmit(void);
 void OWReceive(void);
 
-
 //1 wire
+void OWInit(void){
+temp.TransmitReceive = false;
+temp.busy = true;
+temp.transmitInProgress = false;
+temp.receiveInProgress = false;
+//OWTransmit();
+//temp.TransmitReceive = false;
+//HAL_Delay(200);
+//OWReceive();
+}
+void OWTick200(void){
+    if(!temp.transmitInProgress && !temp.receiveInProgress){
+        temp.TransmitReceive = ! temp.TransmitReceive;
+        temp.busy = false;
+    }
+}
+void OWRoute(void){
+    if(!temp.busy){
+        temp.busy = true;
+        if(temp.TransmitReceive)
+            OWTransmit();
+        else
+            OWReceive();
+    }
+}
 bool OWReset(void){
 	uint8_t tx = 0xf0;
 	uint8_t rx = 0;
@@ -81,8 +109,7 @@ bool OWReset(void){
 	if (HAL_UART_Init(&huart2) != HAL_OK)
 	{
 	  _Error_Handler(__FILE__, __LINE__);
-	}
-
+    }
 	if(rx==0xf0)
 		return false;
 
@@ -90,10 +117,16 @@ bool OWReset(void){
 }
 
 void OWTransmit(void){
+    temp.transmitInProgress = true;
+    //temp.busy = true;
 	temp.reset = OWReset();
 	if(temp.reset) HAL_UART_Transmit(&huart2,&convert_T,16,5000);
+    //temp.TransmitReceive = false;
+    temp.transmitInProgress = false;
 }
 void OWReceive(void){
+    temp.receiveInProgress = true;
+    //temp.busy = true;
 	uint8_t rx=0;
 	uint8_t i=0;
 
@@ -118,6 +151,8 @@ void OWReceive(void){
 				HAL_Delay(1);
 				temp.out = (temp.out + (int)(temp.raw>>4) )/2;
 			}
+    //temp.TransmitReceive = true;
+    temp.receiveInProgress = false;
 }
 
 
