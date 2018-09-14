@@ -44,6 +44,7 @@
 #include "OT.h"
 #include "DS18B20.h"
 #include "RPi.h"
+#include "sim800l.h"
 #include <string.h>
 /* USER CODE END Includes */
 
@@ -73,8 +74,8 @@ UART_HandleTypeDef huart3;
 
 uint32_t micros;
 
-uint8_t sim_tx[10];
-uint8_t sim_rx[10];
+//uint8_t sim_tx[10];
+//uint8_t sim_rx[10];
 /* Private variables ---------------------------------------------------------*/
 ADC_ChannelConfTypeDef adcChannel;
 
@@ -85,28 +86,14 @@ typedef struct{
 }ADC_Struct;
 ADC_Struct adc;
 
-typedef struct{
-	bool transmitRequered;
-	bool waitForResponse;
-	char* TX;
-	char rx_buff[10];
-	char tx_buff[64];
-	char *RX;
-	char RXEcho[128];
-	char RXResponse[128];
-	uint8_t index;
-	uint8_t readIndex;
 
-}SIM800_Struct;
-SIM800_Struct gprs;
-
-int quality = 0;
+/*int quality = 0;
 const char *a[10] = {
 		"AT",
 		"AT+CSQ",
 		"ATI",
 		"AT+CBC"
-};
+};*/
 
 /* USER CODE END PV */
 
@@ -135,10 +122,6 @@ int ReadAnalogADC1( uint32_t ch );
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-/*void SysTick_Handler(void)
-{
-
-}*/
 //void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	/*if(GPIO_Pin== GPIO_PIN_15 && ext){
 		//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
@@ -175,51 +158,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if (htim->Instance==TIM4) //check if the interrupt comes from TIM3
 	{
 		micros++;
-		//if(micros%1000==0)
-			//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 	}
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	if (huart->Instance==USART3){
+	if (huart->Instance==USART3)
         RPiRXRoute();
-	}
-	if (huart->Instance==USART1){
-		for(int i=0;i<2;i++){
-			if(gprs.rx_buff[i]!='\0'){
-
-			    size_t len = strlen(gprs.RX);
-			    char *str2 = malloc(len + 1 + 1 ); /* one for extra char, one for trailing zero */
-			    strcpy(str2, gprs.RX);
-			    str2[len] = gprs.rx_buff[i];
-			    str2[len + 1] = '\0';
-
-			    gprs.RX = str2;
-			    free(str2);
-
-				//gprs.RX += 'a'+gprs.rx_buff[i];
-				/*if(gprs.index==127){//gprs.index>0 && gprs.RX[gprs.index-1]=='\r' && gprs.RX[gprs.index]=='\n'){
-
-					//for(int n=0;n<gprs.index;n++)
-						//gprs.RXResponse[n] = gprs.RX[n];
-					gprs.index=0;
-				}else{
-					gprs.index++;
-				}*/
-			}
-		}
-		HAL_UART_Receive_IT(&huart1,gprs.rx_buff,2);
-	}
-}
-int strpos(char *hay, char *needle, int offset)
-{
-   char haystack[strlen(hay)];
-   strncpy(haystack, hay+offset, strlen(hay)-offset);
-   char *p = strstr(haystack, needle);
-   if (p)
-      return p - haystack+offset;
-   return -1;
+	if (huart->Instance==USART1)
+		checkUpdate();
 }
 
 void HAL_SYSTICK_Callback(void){
@@ -230,78 +177,59 @@ void HAL_SYSTICK_Callback(void){
 	if(strpos(gprs.RX,str2,0)>=0)
 		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);*/
 
+	checkAT();
 
-
-	if(strlen(gprs.RX)>0){
-		char * found = strstr(gprs.RX,"OK"); /* should return 0x18 */
-		if (found != NULL)                     /* strstr returns NULL if item not found */
-		{
-		  int index = found - gprs.RX;          /* index is 8 */
-											   /* source[8] gets you "i" */
-		  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-		  gprs.waitForResponse = false;
-
-		  //gprs.RX = "";
-		  gprs.index++;
-		  if(gprs.index>5)
-			  gprs.index=0;
-
-		  if(strpos(gprs.RX,"+COPS?",0)>0){
-			  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-			  //printf("+CSQ");
-			  //char *token = strtok(gprs.RX, "+CSQ: ");
-			 // quality = strtol(gprs.RX, ',', 10);
-		  }
-		  gprs.RX = "";
-		  //strcpy(gprs.TX,a[gprs.index]);
-		  switch(gprs.index){
-		  case 0:
-			  gprs.TX = "AT\r\n";
-			  break;
-		  case 1:
-			  gprs.TX = "AT+CFUN=1\r\n";
-			  break;
-		  case 2:
-			  gprs.TX = "AT+CSQ\r\n";
-			  break;
-		  case 3:
-			  gprs.TX = "AT+CREG=1\r\n";
-			  break;
-		  case 4:
-			  gprs.TX = "AT+CREG?\r\n";
-			  break;
-		  case 5:
-			  gprs.TX = "AT+COPS?\r\n";
-			  break;
-		  }
-		  gprs.transmitRequered = true;
-		}
-	}
+//	if(strlen(gprs.RX)>0){
+//		char * found = strstr(gprs.RX,"OK"); /* should return 0x18 */
+//		if (found != NULL)                     /* strstr returns NULL if item not found */
+//		{
+//		  int index = found - gprs.RX;          /* index is 8 */
+//											   /* source[8] gets you "i" */
+//		  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+//		  gprs.waitForResponse = false;
+//
+//		  //gprs.RX = "";
+//		  gprs.index++;
+//		  if(gprs.index>5)
+//			  gprs.index=0;
+//
+//		  if(strpos(gprs.RX,"+COPS?",0)>0){
+//			  HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+//			  //printf("+CSQ");
+//			  //char *token = strtok(gprs.RX, "+CSQ: ");
+//			 // quality = strtol(gprs.RX, ',', 10);
+//		  }
+//		  gprs.RX = "";
+//		  //strcpy(gprs.TX,a[gprs.index]);
+//		  switch(gprs.index){
+//		  case 0:
+//			  gprs.TX = "AT\r\n";
+//			  break;
+//		  case 1:
+//			  gprs.TX = "AT+CFUN=1\r\n";
+//			  break;
+//		  case 2:
+//			  gprs.TX = "AT+CSQ\r\n";
+//			  break;
+//		  case 3:
+//			  gprs.TX = "AT+CREG=1\r\n";
+//			  break;
+//		  case 4:
+//			  gprs.TX = "AT+CREG?\r\n";
+//			  break;
+//		  case 5:
+//			  gprs.TX = "AT+COPS?\r\n";
+//			  break;
+//		  }
+//		  gprs.transmitRequered = true;
+//		}
+//	}
 	//strstr( gprs.RX, "in" );
 
 	//if(index>=0)
 
       if(HAL_GetTick()%200==0)
               OWTick200();
-		 // HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-		  //SEND DATA OVER SPI TO RPi
-		  	/*HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_RESET);
-		  	RPi_SPI.address = 0xAA;
-		  	RPi_SPI.data[0] = 0xBA;
-
-		  	RPi_SPI.tx_buff[0] = 0xA1;
-		  	RPi_SPI.tx_buff[1] = 0xA2;
-		  	RPi_SPI.tx_buff[2] = 0xA3;
-		  	RPi_SPI.tx_buff[3] = 0xA4;
-		  	RPi_SPI.tx_buff[4] = 0xA5;
-		  	//HAL_SPI_Transmit(&hspi2,&RPi_SPI.tx_buff, 2, 5000);
-		  	//HAL_SPI_Receive(&hspi2, &RPi_SPI.rx_buff, 3,5000);
-		  	HAL_SPI_TransmitReceive(&hspi2, &RPi_SPI.tx_buff, &RPi_SPI.rx_buff, 3, 0x1000);
-		  	HAL_GPIO_WritePin(NSS2_GPIO_Port, NSS2_Pin, GPIO_PIN_SET);
-*/
-
-
-     // }
 }
 /* USER CODE END 0 */
 
@@ -313,13 +241,13 @@ void HAL_SYSTICK_Callback(void){
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	uint8_t rx[16];
+	//uint8_t rx[16];
 	uint8_t i=0;
 
-	uint16_t tt=0;
-	int Temp;
+	//uint16_t tt=0;
+	//int Temp;
 
-	uint32_t re;
+	//uint32_t re;
 	//int index;
   /* USER CODE END 1 */
 
@@ -356,12 +284,12 @@ int main(void)
   //HAL_TIM_Base_Stop_IT(&htim4);
   initADC();
   //HAL_SPI_Receive_IT(&hspi2, RPi_SPI.rx_buff, 3);
-  HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,4);
-  RPi_UART.transmitRequered = false;
-  HAL_UART_Receive_IT(&huart1,gprs.rx_buff,2);
-  gprs.RX = "";
+  RPiInit();
+
+//  HAL_UART_Receive_IT(&huart1,&gprs.rx_buff,1);
+ /* gprs.RX = "";
   gprs.transmitRequered = false;
-  gprs.waitForResponse = false;
+  gprs.waitForResponse = false;*/
   /*RPi_SPI.rxed = 0;
 
   RPi_SPI.tx_buff[0] = 0x0A;b
@@ -397,12 +325,14 @@ int main(void)
   frame.raw[2] = 0xAA;
   frame.frame.data[0];
   frame.frame.address;*/
-  gprs.index=0;
-  gprs.readIndex=0;
+//  gprs.index=0;
+//  gprs.readIndex=0;
+//
+//  gprs.TX = "AT\r\n";
+//  gprs.transmitRequered = true;
+//  gprs.waitForResponse = true;
 
-  gprs.TX = "AT\r\n";
-  gprs.transmitRequered = true;
-  gprs.waitForResponse = true;
+  initAT();
   /*while(gprs.waitForResponse){
 
   }
@@ -413,8 +343,8 @@ int main(void)
   while(gprs.waitForResponse){
 
   }*/
-  /*HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
-  HAL_Delay(3000);*/
+//  HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
+//  HAL_Delay(3000);
 
   /*gprs.TX = "AT+CREG?\r";
   HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
@@ -441,27 +371,29 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-
+	  sendQueue();
+	  OWRoute();
+	  RPiRoute();
         /*OWTransmit();//HAL_UART_Transmit(&huart2,&convert_T,16,5000);
 		temp.TransmitReceive = false;
 	 // }else{
 		HAL_Delay(200);
 
         OWReceive();*/
-          OWRoute();
 
-	  if(gprs.transmitRequered){
+
+	  /*if(gprs.transmitRequered){
 		  //gprs.TX = "AT\r\n";
 
 		  HAL_Delay(1000);
 		  HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
 		  gprs.transmitRequered = false;
 		  gprs.waitForResponse = true;
-	  }
+	  }*/
 
 	  //HAL_Delay(1000);
 
-	  RPi_SPI.tx_buff[2] = temp.raw;
+	  //RPi_SPI.tx_buff[2] = temp.raw;
 
 	  adc.in[ V4_SENSE ] = ReadAnalogADC1( V4_SENSE );
 	  adc.in[ RPI_3V3_SENSE ] = ReadAnalogADC1( RPI_3V3_SENSE );
@@ -473,8 +405,8 @@ int main(void)
 	  for(i=0;i<16;i++)
 		  adc.v[i] = ( adc.v[i] + adc.in[i]*(3.3/4095.0)*(3.9+2.2)/3.9 )/2.0;
 
-	  RPi_SPI.tx_buff[0] = (uint8_t)(adc.rpi_3v3>>8);
-	  RPi_SPI.tx_buff[1] = (uint8_t)adc.rpi_3v3;
+	  //RPi_SPI.tx_buff[0] = (uint8_t)(adc.rpi_3v3>>8);
+	  //RPi_SPI.tx_buff[1] = (uint8_t)adc.rpi_3v3;
 
 	  /*if(RPi_SPI.rxed == 1){
 		  RPi_SPI.tx_buff[0] = 0x0A;
@@ -491,10 +423,7 @@ int main(void)
 	  }*/
 
 
-	  if(RPi_UART.transmitRequered){
-		  HAL_UART_Transmit(&huart3,RPi_UART.tx_buff,4,1000);
-		  RPi_UART.transmitRequered = false;
-	  }
+
 
 
       //OT
