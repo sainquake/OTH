@@ -105,7 +105,7 @@ sendQueue()
   if (!gprs.busy) {
     gprs.busy = true;
     gprs.TX = queue[gprs.index];
-    HAL_UART_Transmit(&huart1,gprs.TX,strlen(gprs.TX),5000);
+    HAL_UART_Transmit_IT(&huart1,gprs.TX,strlen(gprs.TX));
   }
   return;
 }

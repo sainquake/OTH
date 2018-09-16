@@ -8,6 +8,8 @@
 #ifndef RPI_H_
 #define RPI_H_
 
+#include "ADC.h"
+#include  "OT.h"
 
 #include "stm32f1xx_hal.h"
 
@@ -72,16 +74,17 @@ void RPiRoute(void){
 }
 //toRPIlib
 void RPiRXRoute(void){
+	int16_t tmp;
     for (int i=0;i<RPI_BUFFER_SIZE;i++)
         rpiframe.raw[i] = RPi_UART.rx_buff[i];
 
-    switch(rpiframe.frame.address){
+    switch(rpiframe.frame.address & 0xff){
     case RPi_ECHO_UART_ADDRESS:
         HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
         //frame.frame.address = 1;
         //if(!frame.frame.read)
-            for (int i=0;i<4;i++)
-                RPi_UART.tx_buff[i] = rpiframe.raw[i];
+            //for (int i=0;i<4;i++)
+              //  RPi_UART.tx_buff[i] = rpiframe.raw[i];
         //else
         //	for (int i=0;i<4;i++)
         //		RPi_UART.tx_buff[i] = 0;
@@ -90,8 +93,10 @@ void RPiRXRoute(void){
     case 2:
         ot.RPiRequestHI = rpiframe.frame.data;
         break;
-    case 3:
-        ot.RPiRequestLO = rpiframe.frame.data;
+    case RPi_OT_UART_ADDRESS:
+    	tmp = rpiframe.frame.address>>8 & 0xEF;
+    	rpiframe.frame.data = OTDR.ID3.SlaveMemberID;
+    	RPi_UART.transmitRequered = true;
         break;
     case 4:
 
@@ -103,21 +108,25 @@ void RPiRXRoute(void){
         HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
         //ot.RPiResponseLO= frame.frame.data;
         break;
-    case 6:
+    case RPi_ADC_UART_ADDRESS:
+    	tmp = round(adc.v[ rpiframe.frame.address>>8 & 0x0f ]*256.0);
+    	rpiframe.frame.data = tmp;
+    	RPi_UART.transmitRequered = true;
         //ot.RPiRequestHI = frame.frame.data;
         break;
     case RPi_SET_TEMP_UART_ADDRESS:
         OTCommon.targetTemp = rpiframe.frame.data;
         //rpiframe.frame.data = 1;
-        for (int i=0;i<4;i++)
-            RPi_UART.tx_buff[i] = rpiframe.raw[i];
+        //for (int i=0;i<4;i++)
+           // RPi_UART.tx_buff[i] = rpiframe.raw[i];
 
         RPi_UART.transmitRequered = true;
         break;
     case RPi_GET_HW_TEMP_UART_ADDRESS:
-        rpiframe.frame.data = temp.out;
-        for (int i=0;i<4;i++)
-            RPi_UART.tx_buff[i] = rpiframe.raw[i];
+    	tmp = round(temp.out*256.0);
+        rpiframe.frame.data = tmp;
+        //for (int i=0;i<4;i++)
+           // RPi_UART.tx_buff[i] = rpiframe.raw[i];
         RPi_UART.transmitRequered = true;
         break;
     }
@@ -129,6 +138,8 @@ void RPiRXRoute(void){
         HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
         //RPi_UART.tx_buff
     }
+    for (int i=0;i<RPI_BUFFER_SIZE;i++)
+        RPi_UART.tx_buff[i] = rpiframe.raw[i];
     HAL_UART_Receive_IT(&huart3,RPi_UART.rx_buff,RPI_BUFFER_SIZE);
 }
 
