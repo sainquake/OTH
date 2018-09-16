@@ -61,7 +61,7 @@ temp.receiveInProgress = false;
 //HAL_Delay(200);
 //OWReceive();
 }
-void OWTick200(void){
+void OWTick(void){
     if(!temp.transmitInProgress && !temp.receiveInProgress){
         temp.TransmitReceive = ! temp.TransmitReceive;
         temp.busy = false;
