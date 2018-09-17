@@ -10,6 +10,7 @@
 
 #include "ADC.h"
 #include  "OT.h"
+#include "sim800l.h"
 
 #include "stm32f1xx_hal.h"
 
@@ -108,8 +109,10 @@ void RPiRXRoute(void) {
 		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//ot.RPiResponseHI = frame.frame.data;
 		break;
-	case 5:
-
+	case RPi_SIM800L_UART_ADDRESS:
+		if (subaddress == 0){
+			rpiframe.frame.data = AT.at.response;
+		}
 		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//ot.RPiResponseLO= frame.frame.data;
 		break;

@@ -21,55 +21,67 @@ extern ADC_HandleTypeDef hadc1;
 
 ADC_ChannelConfTypeDef adcChannel;
 
-typedef struct{
+typedef struct {
 	int rpi_3v3;
 	int in[16];
 	float v[16];
-}ADC_Struct;
+} ADC_Struct;
 ADC_Struct adc;
 
 //ADC
 void initADC(void);
-void StartAnalogADC1( uint32_t ch );
-int GetAnalogADC1( void );
-int ReadAnalogADC1( uint32_t ch );
+void StartAnalogADC1(uint32_t ch);
+int GetAnalogADC1(void);
+int ReadAnalogADC1(uint32_t ch);
 
-
-void initADC(void){
-	adcChannel.Channel = ADC_CHANNEL_0;//B
+void initADC(void) {
+	adcChannel.Channel = ADC_CHANNEL_0; //B
 	adcChannel.Rank = 1;
 	adcChannel.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
 
+	//ADC1
+	//HAL_ADC_MspInit(&hadc1);
+	HAL_ADC_Start(&hadc1);
+	//adc2
+	//HAL_ADC_MspInit(&hadc2);
+	//HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
+}
 
+void routeADC(void) {
+	adc.in[ V4_SENSE] = ReadAnalogADC1( V4_SENSE);
+	adc.in[ RPI_3V3_SENSE] = ReadAnalogADC1( RPI_3V3_SENSE);
+	adc.in[ USB_5V_SENSE] = ReadAnalogADC1( USB_5V_SENSE);
+	adc.in[ VIN_SENSE] = ReadAnalogADC1( VIN_SENSE);
+	adc.in[ A14] = ReadAnalogADC1( A14);
+	adc.in[ A15] = ReadAnalogADC1( A15);
 
-	  //ADC1
-	  //HAL_ADC_MspInit(&hadc1);
-	  HAL_ADC_Start(&hadc1);
-	  //adc2
-	  //HAL_ADC_MspInit(&hadc2);
-	  //HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
+	for (int i = 0; i < 16; i++)
+		adc.v[i] = (adc.v[i] + adc.in[i] * (3.3 / 4095.0) * (3.9 + 2.2) / 3.9)
+				/ 2.0;
 }
 //ADC
-void StartAnalogADC1( uint32_t ch ){
-	adcChannel.Channel = ch;//B
+void StartAnalogADC1(uint32_t ch) {
+	adcChannel.Channel = ch;	  //B
 	adcChannel.Rank = 1;
 	adcChannel.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
 
 	HAL_ADC_ConfigChannel(&hadc1, &adcChannel);
 	HAL_ADC_Start(&hadc1);
 }
-int GetAnalogADC1( void ){
-	while( __HAL_ADC_GET_FLAG(&hadc1, ADC_FLAG_EOC)==0 ){}
+int GetAnalogADC1(void) {
+	while ( __HAL_ADC_GET_FLAG(&hadc1, ADC_FLAG_EOC) == 0) {
+	}
 	return HAL_ADC_GetValue(&hadc1);
 }
-int ReadAnalogADC1( uint32_t ch ){
-	adcChannel.Channel = ch;//B
+int ReadAnalogADC1(uint32_t ch) {
+	adcChannel.Channel = ch;	  //B
 	adcChannel.Rank = 1;
 	adcChannel.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
 
-	HAL_ADC_ConfigChannel(&hadc1, &adcChannel);//A4 / B
+	HAL_ADC_ConfigChannel(&hadc1, &adcChannel);	  //A4 / B
 	HAL_ADC_Start(&hadc1);
-	while( __HAL_ADC_GET_FLAG(&hadc1, ADC_FLAG_EOC)==0 ){}
+	while ( __HAL_ADC_GET_FLAG(&hadc1, ADC_FLAG_EOC) == 0) {
+	}
 	return HAL_ADC_GetValue(&hadc1);
 }
 

@@ -241,7 +241,7 @@ void OTRoute(void) {
 
 			ot.readingResponse = true;
 			while (!checkTimerOVF()) {
-				}
+			}
 			ot.rx.raw = calculateResponse();
 			ot.reg[OTCommon.index] = ot.rx.raw;	//sendRequest( requests[OTCommon.index] );
 
@@ -276,7 +276,7 @@ void OTRoute(void) {
 		}
 		ot.complete = true;
 	}
-	if(ot.readingResponse && checkTimerOVF()){
+	if (ot.readingResponse && checkTimerOVF()) {
 		ot.readingResponse = false;
 
 	}
@@ -461,21 +461,19 @@ uint32_t readResponse() {
 	 }*/
 
 	startReadResponse();
-/*ot.rx_ext.raw = 0;
-	swIndex = 0;
-	TIM2->PSC = 64;
-	TIM2->ARR = 40000;
-	TIM2->CNT = 0;
-	htim2.Init.Prescaler = 64;
-	htim2.Init.Period = 40000;
-	//HAL_TIM_Base_Init(&htim2);
-	HAL_TIM_IC_Init(&htim2);
-	//HAL_TIM_Base_Start_IT(&htim2);
-	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
-	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
-	*/
-
-
+	/*ot.rx_ext.raw = 0;
+	 swIndex = 0;
+	 TIM2->PSC = 64;
+	 TIM2->ARR = 40000;
+	 TIM2->CNT = 0;
+	 htim2.Init.Prescaler = 64;
+	 htim2.Init.Period = 40000;
+	 //HAL_TIM_Base_Init(&htim2);
+	 HAL_TIM_IC_Init(&htim2);
+	 //HAL_TIM_Base_Start_IT(&htim2);
+	 HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+	 HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
+	 */
 
 	//for (int i = 0; i < 32; i++) {
 	//delayMicros(100);
@@ -486,7 +484,6 @@ uint32_t readResponse() {
 	//HAL_TIM_Base_Start(&htim4);
 	//HAL_TIM_IC_Start_IT(&htim2,TIM_CHANNEL_1);
 	//HAL_TIM_IC_Start_IT(&htim2,TIM_CHANNEL_2);!stateChanged){//
-
 //	    while (state == HAL_GPIO_ReadPin(OT_TXI_GPIO_Port,OT_TXI_Pin) ){
 //	    }
 //	    stateChanged=false;
@@ -504,26 +501,26 @@ uint32_t readResponse() {
 	}
 	//HAL_TIM_Base_Stop_IT(&htim2);
 	/*HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_1);
-	HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_2);
+	 HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_2);
 
-	readResponseInProgress = false;
+	 readResponseInProgress = false;
 
-	int cnt = 0;
-	uint32_t response = 0;
-	if (!rf[0])
-		response |= (1 << 0);
-	uint32_t oldt = ttime[0];
-	for (int i = 1; i < 64; i++) {
-		if (ttime[i] > oldt + 900) {
-			response = response << 1;
-			if (!rf[i])
-				response |= 1;
-			oldt = ttime[i];
-			cnt++;
-			if (cnt == 31)
-				break;
-		}
-	}*/
+	 int cnt = 0;
+	 uint32_t response = 0;
+	 if (!rf[0])
+	 response |= (1 << 0);
+	 uint32_t oldt = ttime[0];
+	 for (int i = 1; i < 64; i++) {
+	 if (ttime[i] > oldt + 900) {
+	 response = response << 1;
+	 if (!rf[i])
+	 response |= 1;
+	 oldt = ttime[i];
+	 cnt++;
+	 if (cnt == 31)
+	 break;
+	 }
+	 }*/
 	ot.rx.raw = calculateResponse();	  //response;
 	return ot.rx.raw;
 }

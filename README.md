@@ -1,8 +1,11 @@
-init
 # features
 * AT COMMANDS SIM800C/L https://www.elecrow.com/download/SIM800%20Series_AT%20Command%20Manual_V1.09.pdf
 * SIM800C/L http://codius.ru/articles/GSM_%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D1%8C_SIM800L_%D1%87%D0%B0%D1%81%D1%82%D1%8C_1
 * TIM4 for microseconds delay 
+* TIM2 InputCapture Mode  for OpenTerm receive data 
+* HUART3 for RPi dialog; Useing DMA for TX data
+* HUART2 for 1-Wire DS18B20 temperature sensor
+
 # todo
 
 * PA9 add devider 3.3/(3.3+1)
@@ -15,6 +18,10 @@ init
 * parity calc
 
 * UNION usage for UART STM-RPi Protocol
+
+* separate power for sim800l module
+
+* HUART1  אשך SIM800L use DMA for TX
 
 # electronics issue
 * make R4 700 Ohm
@@ -35,7 +42,7 @@ init
 * https://stackoverflow.com/questions/45574246/hal-drivers-erase-read-write-flash-on-stm32f4-nucleo
 
 
-
+# RPi bluetooth issue for Wi-Fi login password enter
 
 * https://www.cnet.com/how-to/how-to-setup-bluetooth-on-a-raspberry-pi-3/
 * https://github.com/EnableTech/raspberry-bluetooth-demo
