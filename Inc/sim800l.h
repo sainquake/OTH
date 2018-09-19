@@ -34,7 +34,7 @@ extern UART_HandleTypeDef huart1;
 #define AT_SAPBR		14 //Устанавливаем GPRS соединение
 #define AT_HTTPINIT		15 //Инициализация http сервиса
 #define AT_HTTPPARA		16 //Установка CID параметра для http сессии
-#define AT_HTTPPARA		17 //Процедура отправки данных на сервер
+#define AT_HTTPPARA_DATA 17 //Процедура отправки данных на сервер
 #define AT_HTTPACTION	18 //GET=0 POST=1 HEAD=2
 //Отправка SMS-сообщения:
 #define AT_CMGS			19
@@ -115,7 +115,7 @@ void initAT() {
 	//gprs.waitForResponse = false;
 	gprs.busy = false;
 
-	gprs.index = 0;
+	gprs.index = 4;
 	//gprs.readIndex = 0;
 
 	AT.at.request = "AT\r\n";
@@ -139,7 +139,7 @@ void initAT() {
 	AT.cspn.request = "AT+CSPN?\r\n"; // Чтение имени провайдера
 	AT.cspn.response = INIT_STATE;
 
-	AT.cusd.request = "AT+CUSD=1,\"*100#\"\r\n"; //, Request //Чтение баланса SIM-карты
+	AT.cusd.request = "AT+CUSD=1,'*100#'\r\n"; //, Request //Чтение баланса SIM-карты
 	AT.cusd.response = INIT_STATE;
 
 	AT.cpin.request = "AT+CPIN?\r\n"; //SIM not inserted
@@ -149,17 +149,27 @@ void initAT() {
 	AT.sapbrCONTYPE.response = INIT_STATE;
 
 	AT.sapbrAPN.request = "";
+	//"AT+CSQ\r\n" //качество сигнала
 
 	queue[0] = AT.at.request;
 	queue[1] = AT.cops.request;
 	queue[2] = AT.setCMGF.request;
+	queue[3] = AT.getCMGF.request;
+	queue[4] = AT.gsn.request;
+	queue[5] = AT.cusd.request;
+	queue[6] = AT.cpin.request;
+	queue[7] = AT.cpin.request;
 
 	HAL_UART_Receive_IT(&huart1, gprs.rx_buff, RX_BUFFER_SIZE);
 }
 void sendQueue() {
 	if (!gprs.busy) {
 		gprs.busy = true;
-		gprs.TX = queue[gprs.index];
+		//gprs.TX = "AT+CREG?\r\n";
+		gprs.TX = "AT+CCID\r\n";
+		//gprs.TX = AT.cops.request;
+		//gprs.TX = "AT+CMGS=\"+79518926260\"\r\n";//queue[gprs.index];
+		//gprs.TX = "hello\x1a";
 		HAL_UART_Transmit_IT(&huart1, gprs.TX, strlen(gprs.TX));
 	}
 	return;
@@ -199,6 +209,8 @@ void checkAT() {
 			char* found = strstr(gprs.RX, ": ");
 			AT.cops.args = found + 2;
 		}
+		//gprs.RX = "";
+		//gprs.busy=false;
 	}
 	return;
 }
