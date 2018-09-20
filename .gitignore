@@ -1,0 +1,11 @@
+# C objects
+*.elf
+*.list
+*.map
+*.su
+*.o
+*.lai
+*.so
+*.dll
+*.dylib
+
