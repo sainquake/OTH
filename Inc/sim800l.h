@@ -52,6 +52,8 @@ typedef struct {
 	//bool waitForResponse;
 	// char reserved:6;
 	char rx_buff[RX_BUFFER_SIZE];
+	char rxChar[1024];
+	uint16_t i;
 	// char tx_buff[64];
 	// char RXEcho[128];
 	// char RXResponse[128];
@@ -115,7 +117,8 @@ void initAT() {
 	//gprs.waitForResponse = false;
 	gprs.busy = false;
 
-	gprs.index = 4;
+	gprs.index = 0;
+	gprs.i=0;
 	//gprs.readIndex = 0;
 
 	AT.at.request = "AT\r\n";
@@ -151,32 +154,55 @@ void initAT() {
 	AT.sapbrAPN.request = "";
 	//"AT+CSQ\r\n" //качество сигнала
 
-	queue[0] = AT.at.request;
-	queue[1] = AT.cops.request;
-	queue[2] = AT.setCMGF.request;
-	queue[3] = AT.getCMGF.request;
-	queue[4] = AT.gsn.request;
-	queue[5] = AT.cusd.request;
-	queue[6] = AT.cpin.request;
-	queue[7] = AT.cpin.request;
+	queue[0] = "AT\r\n";
+	queue[1] = "AT+CSQ\r\n";
+	queue[2] = "AT+CMGF=1\r\n";
+	queue[3] = "AT+CMGS=\"+79518926260\"\r\n";
+	queue[4] = "hello\x1a\r\n";
 
 	HAL_UART_Receive_IT(&huart1, gprs.rx_buff, RX_BUFFER_SIZE);
 }
 void sendQueue() {
 	if (!gprs.busy) {
 		gprs.busy = true;
-		//gprs.TX = "AT+CREG?\r\n";
-		gprs.TX = "AT+CCID\r\n";
+
+		gprs.TX = "AT\r\n";
+//		gprs.TX = "AT+CPIN?\r\n"; //..симка//5s
+//		gprs.TX = "AT+CFUN?\r\n"; //1=полная работоспособность//10s
+//		gprs.TX = "AT+CBC\r\n"; //напряжение питания
+//		gprs.TX = "AT+CSQ\r\n"; //качество сигнала
+//		gprs.TX = "AT+CPAS\r\n"; // Ожидание готовности GSM-модуля и SIM-карты //2 Unknown (MT is not guaranteed to respond totructions)
+//		gprs.TX = "AT+CSPN?\r\n"; // Чтение имени провайдера
+		gprs.TX = "AT+CSCS=\"PCCP\"\r\n";
+		//gprs.TX = "AT+CMGF=1\r\n"; // Текстовый режим (не PDU)
+//		gprs.TX = "AT+CREG?\r\n"; //Тип регистрации в сети
+		gprs.TX = "AT+CUSD=1,\"*102#\"\r\n"; //, Request //Чтение баланса SIM-карты //20s
+
+//		gprs.TX = "AT+CMGF=1\r\n"; // Текстовый режим (не PDU)
+//		gprs.TX = "AT+CMGS=\"+79518926260\"\r\n";//sms
+//		gprs.TX = "hello\x1a\r\n";
+
+		//gprs.TX = "AT+CMGL=4\r\n";
+		//gprs.TX = "AT+CMGR=3\r\n";
+		//gprs.TX = "AT+CPMS=\"MT\"\r\n";
+
+		//gprs.TX = "AT+CCID\r\n";
 		//gprs.TX = AT.cops.request;
-		//gprs.TX = "AT+CMGS=\"+79518926260\"\r\n";//queue[gprs.index];
+
 		//gprs.TX = "hello\x1a";
+		//gprs.TX = queue[gprs.index];
 		HAL_UART_Transmit_IT(&huart1, gprs.TX, strlen(gprs.TX));
+	}
+	if(HAL_GetTick()%5000==0 && gprs.index<4){
+		gprs.index ++;
+		//gprs.busy=false;
+
 	}
 	return;
 }
 
 void checkAT() {
-	size_t len = strlen(gprs.TX); //namelen = strlen(name);
+	/*size_t len = strlen(gprs.TX); //namelen = strlen(name);
 	//
 	//har* copy;
 	char* str2;
@@ -211,13 +237,13 @@ void checkAT() {
 		}
 		//gprs.RX = "";
 		//gprs.busy=false;
-	}
+	}*/
 	return;
 }
 
 void checkUpdate() {
 	for (int i = 0; i < RX_BUFFER_SIZE; i++) {
-		if (gprs.rx_buff[i] != '\0') {
+		/*if (gprs.rx_buff[i] <127 &&  gprs.rx_buff[i]>31){//!= '\0') {
 
 			size_t len = strlen(gprs.RX);
 			char* str2 = (char*) malloc(len + 1 + 1);
@@ -228,7 +254,9 @@ void checkUpdate() {
 			gprs.RX = str2;
 			//free(str2);
 		}
-		gprs.rx_buff[i] = '\0';
+		gprs.rx_buff[i] = '\0';*/
+		gprs.rxChar[gprs.i] = gprs.rx_buff[i];
+		gprs.i++;
 	}
 	HAL_UART_Receive_IT(&huart1, gprs.rx_buff, RX_BUFFER_SIZE);
 }
