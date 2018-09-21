@@ -100,15 +100,9 @@ typedef struct {
 	ATLine_Struct message;
 } AT_Struct;
 AT_Struct AT;
-
-int strpos(char* hay, char* needle, int offset) {
-	char haystack[strlen(hay)];
-	strncpy(haystack, hay + offset, strlen(hay) - offset);
-	char* p = strstr(haystack, needle);
-	if (p)
-		return p - haystack + offset;
-	return -1;
-}
+int hex_to_int(char c);
+int hex_to_ascii(char c, char d);
+int strpos(char* hay, char* needle, int offset);
 
 void initAT() {
 	gprs.TX = "";
@@ -173,7 +167,7 @@ void sendQueue() {
 //		gprs.TX = "AT+CSQ\r\n"; //качество сигнала
 //		gprs.TX = "AT+CPAS\r\n"; // Ожидание готовности GSM-модуля и SIM-карты //2 Unknown (MT is not guaranteed to respond totructions)
 //		gprs.TX = "AT+CSPN?\r\n"; // Чтение имени провайдера
-		gprs.TX = "AT+CSCS=\"PCCP\"\r\n";
+		gprs.TX = "AT+CSCS=\"GPS\"\r\n";
 		//gprs.TX = "AT+CMGF=1\r\n"; // Текстовый режим (не PDU)
 //		gprs.TX = "AT+CREG?\r\n"; //Тип регистрации в сети
 		gprs.TX = "AT+CUSD=1,\"*102#\"\r\n"; //, Request //Чтение баланса SIM-карты //20s
@@ -261,5 +255,27 @@ void checkUpdate() {
 	HAL_UART_Receive_IT(&huart1, gprs.rx_buff, RX_BUFFER_SIZE);
 }
 void checkReceive() {
+}
+
+int hex_to_int(char c){
+        int first = c / 16 - 3;
+        int second = c % 16;
+        int result = first*10 + second;
+        if(result > 9) result--;
+        return result;
+}
+
+int hex_to_ascii(char c, char d){
+        int high = hex_to_int(c) * 16;
+        int low = hex_to_int(d);
+        return high+low;
+}
+int strpos(char* hay, char* needle, int offset) {
+	char haystack[strlen(hay)];
+	strncpy(haystack, hay + offset, strlen(hay) - offset);
+	char* p = strstr(haystack, needle);
+	if (p)
+		return p - haystack + offset;
+	return -1;
 }
 #endif /* SIM800L_H_ */
