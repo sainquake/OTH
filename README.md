@@ -30,6 +30,8 @@
 * PA8 Output
 * PA15 Input
 
+* Vin to SIM800L Vcc (4V)
+
 
 
 * https://github.com/ihormelnyk/arduino_opentherm_controller - opentherm arduino example
