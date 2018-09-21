@@ -32,6 +32,21 @@
 
 * Vin to SIM800L Vcc (4V)
 
+* strhex to ascii
+```
+    const char* st = "00370037002E0030003200200440002E000A041E0431044904300439044204350441044C0020044100200434044004430433043E043C0020043F043E00200053004D00530020043104350441043F043B04";
+            int length = strlen(st);
+            int i;
+            char buf = 0;
+            for(i = 0; i < length; i++){
+                    if(i % 2 != 0){
+                            printf("%c", hex_to_ascii(buf, st[i]));
+                    }else{
+                            buf = st[i];
+                    }
+            }
+```
+
 
 
 * https://github.com/ihormelnyk/arduino_opentherm_controller - opentherm arduino example
