@@ -110,9 +110,11 @@ void RPiRXRoute(void) {
 		//ot.RPiResponseHI = frame.frame.data;
 		break;
 	case RPi_SIM800L_UART_ADDRESS:
-		if (subaddress == 0){
+		rpiframe.frame.data = gprs.at[subaddress].response;
+		RPi_UART.transmitRequered = true;
+		/*if (subaddress == 0){
 			rpiframe.frame.data = AT.at.response;
-		}
+		}*/
 		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//ot.RPiResponseLO= frame.frame.data;
 		break;
