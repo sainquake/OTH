@@ -53,6 +53,10 @@ SPI_Struct RPi_SPI;
 
 typedef struct {
 	bool transmitRequered;
+
+	int len;
+	char* pointer;
+
 	uint16_t address;
 	uint8_t data;
 	uint8_t rx_buff[RPI_BUFFER_SIZE];
@@ -67,11 +71,17 @@ void RPiRoute(void);
 void RPiInit(void) {
 	HAL_UART_Receive_IT(&huart3, RPi_UART.rx_buff, RPI_BUFFER_SIZE);
 	RPi_UART.transmitRequered = false;
+	RPi_UART.len = -1;
 	return;
 }
 void RPiRoute(void) {
 	if (RPi_UART.transmitRequered) {
-		HAL_UART_Transmit_DMA(&huart3, RPi_UART.tx_buff, RPI_BUFFER_SIZE);
+		if(RPi_UART.len<0){
+			HAL_UART_Transmit_DMA(&huart3, RPi_UART.tx_buff, RPI_BUFFER_SIZE);
+		}else{
+			HAL_UART_Transmit_DMA(&huart3, RPi_UART.pointer, strlen(RPi_UART.pointer));
+			RPi_UART.len = -1;
+		}
 		//HAL_UART_Transmit(&huart3, RPi_UART.tx_buff, RPI_BUFFER_SIZE, 1000);
 		RPi_UART.transmitRequered = false;
 	}
@@ -111,6 +121,14 @@ void RPiRXRoute(void) {
 		break;
 	case RPi_SIM800L_UART_ADDRESS:
 		rpiframe.frame.data = gprs.at[subaddress].response;
+		if(subaddress==AT_CSQ)
+			rpiframe.frame.data = gprs.quality;
+		if(subaddress==AT_CBC)
+			rpiframe.frame.data = gprs.voltage;
+		if(subaddress==AT_CSPN){
+			RPi_UART.pointer = gprs.operator;
+			RPi_UART.len=1;
+		}
 		RPi_UART.transmitRequered = true;
 		/*if (subaddress == 0){
 			rpiframe.frame.data = AT.at.response;

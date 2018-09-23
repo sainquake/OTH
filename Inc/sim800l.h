@@ -38,36 +38,37 @@ typedef enum {
 	AT_CMGS = 19,
 	AT_CMGS_SMS_TEXT = 20,
 	AT_CSQ = 21,
-	AT_CMGF = 22
+	AT_CMGF = 22,
+	AT_CBC = 23
 } AT_Enum;
 
 /*#define AT_AT 			0
-#define AT_CREG			1
-#define AT_COPS			2
+ #define AT_CREG			1
+ #define AT_COPS			2
 
-#define AT_SET_CMGF		3
-#define AT_GET_CMGF		4// 0 - UDP mode supported, 1 - Text mode supported
+ #define AT_SET_CMGF		3
+ #define AT_GET_CMGF		4// 0 - UDP mode supported, 1 - Text mode supported
 
-// from http://wiredlogic.io/ru/diy-gsm-sim900-stm32-open-source-ru/
-#define AT_CPAS			5 //Ожидание готовности GSM-модуля и SIM-карты:
-#define AT_GSN			6 //Чтение IMEI GSM-модуля:
-#define AT_CSPN			7 //Чтение имени провайдера:
-#define AT_CUSD			8 //Чтение баланса SIM-карты.
-//from http://m2msupport.net/m2msupport/sim-at-commands-for-sim-presense-and-status/
-#define AT_CPIN			9 //AT commands for SIM presense and status
-//HTTP from http://2150692.ru/faq/62-gprs-svyaz-cherez-sim800l-i-arduino
-#define AT_SAPBR_CONTYPE 10
-#define AT_SAPBR_APN	11
-#define AT_SAPBR_USER	12
-#define AT_SAPBR_PWD	13
-#define AT_SAPBR		14 //Устанавливаем GPRS соединение
-#define AT_HTTPINIT		15 //Инициализация http сервиса
-#define AT_HTTPPARA		16 //Установка CID параметра для http сессии
-#define AT_HTTPPARA_DATA 17 //Процедура отправки данных на сервер
-#define AT_HTTPACTION	18 //GET=0 POST=1 HEAD=2
-//Отправка SMS-сообщения:
-#define AT_CMGS			19
-#define AT_CMGS_SMS_TEXT 20*/
+ // from http://wiredlogic.io/ru/diy-gsm-sim900-stm32-open-source-ru/
+ #define AT_CPAS			5 //Ожидание готовности GSM-модуля и SIM-карты:
+ #define AT_GSN			6 //Чтение IMEI GSM-модуля:
+ #define AT_CSPN			7 //Чтение имени провайдера:
+ #define AT_CUSD			8 //Чтение баланса SIM-карты.
+ //from http://m2msupport.net/m2msupport/sim-at-commands-for-sim-presense-and-status/
+ #define AT_CPIN			9 //AT commands for SIM presense and status
+ //HTTP from http://2150692.ru/faq/62-gprs-svyaz-cherez-sim800l-i-arduino
+ #define AT_SAPBR_CONTYPE 10
+ #define AT_SAPBR_APN	11
+ #define AT_SAPBR_USER	12
+ #define AT_SAPBR_PWD	13
+ #define AT_SAPBR		14 //Устанавливаем GPRS соединение
+ #define AT_HTTPINIT		15 //Инициализация http сервиса
+ #define AT_HTTPPARA		16 //Установка CID параметра для http сессии
+ #define AT_HTTPPARA_DATA 17 //Процедура отправки данных на сервер
+ #define AT_HTTPACTION	18 //GET=0 POST=1 HEAD=2
+ //Отправка SMS-сообщения:
+ #define AT_CMGS			19
+ #define AT_CMGS_SMS_TEXT 20*/
 
 #define RX_BUFFER_SIZE 32
 #define OK 1
@@ -81,6 +82,11 @@ typedef struct {
 } ATLine_Struct;
 uint8_t queue[10];
 typedef struct {
+	uint8_t quality;
+	uint8_t charge;
+	uint16_t voltage;
+	char *operator;
+
 	bool busy;
 	//bool transmitRequered;
 	//bool waitForResponse;
@@ -110,7 +116,6 @@ typedef struct {
 } SIM800_Struct; // gprs = {0,0,0,0,"",""};
 
 SIM800_Struct gprs;
-
 
 typedef struct {
 	// int8_t AT;
@@ -165,7 +170,7 @@ void initAT() {
 	gprs.at[AT_AT].request = "AT\r\n";
 	gprs.at[AT_AT].response = INIT_STATE;
 
-	gprs.at[AT_CPIN].request ="AT+CPIN?\r\n"; //..симка//5s
+	gprs.at[AT_CPIN].request = "AT+CPIN?\r\n"; //..симка//5s
 	gprs.at[AT_CPIN].response = INIT_STATE;
 
 	gprs.at[AT_CSQ].request = "AT+CSQ\r\n"; //качество сигнала
@@ -173,45 +178,52 @@ void initAT() {
 
 	gprs.at[AT_CMGF].request = "AT+CMGF=1\r\n"; // Текстовый режим (не PDU)
 	gprs.at[AT_CMGF].response = INIT_STATE;
+
+	gprs.at[AT_CBC].request = "AT+CBC\r\n"; //напряжение питания
+	gprs.at[AT_CBC].response = INIT_STATE;
+
+	gprs.at[AT_CSPN].request = "AT+CSPN?\r\n"; // Чтение имени провайдера
+	gprs.at[AT_CSPN].response = INIT_STATE;
 	/*AT.cops.request = "AT+COPS?\r\n";
-	AT.cops.response = INIT_STATE;
+	 AT.cops.response = INIT_STATE;
 
-	AT.setCMGF.request = "AT+CMGF=1\r\n"; // Текстовый режим (не PDU)
-	AT.setCMGF.response = INIT_STATE;
+	 AT.setCMGF.request = "AT+CMGF=1\r\n"; // Текстовый режим (не PDU)
+	 AT.setCMGF.response = INIT_STATE;
 
-	AT.getCMGF.request = "AT+CMGF=?\r\n";
-	AT.getCMGF.response = INIT_STATE;
+	 AT.getCMGF.request = "AT+CMGF=?\r\n";
+	 AT.getCMGF.response = INIT_STATE;
 
-	AT.cpas.request = "AT+CPAS\r\n"; // Ожидание готовности GSM-модуля и SIM-карты
-	AT.cpas.response = INIT_STATE;
+	 AT.cpas.request = "AT+CPAS\r\n"; // Ожидание готовности GSM-модуля и SIM-карты
+	 AT.cpas.response = INIT_STATE;
 
-	AT.gsn.request = "AT+GSN\r\n"; //Чтение IMEI GSM-модуля:
-	AT.gsn.response = INIT_STATE;
+	 AT.gsn.request = "AT+GSN\r\n"; //Чтение IMEI GSM-модуля:
+	 AT.gsn.response = INIT_STATE;
 
-	AT.cspn.request = "AT+CSPN?\r\n"; // Чтение имени провайдера
-	AT.cspn.response = INIT_STATE;
+	 AT.cspn.request = "AT+CSPN?\r\n"; // Чтение имени провайдера
+	 AT.cspn.response = INIT_STATE;
 
-	AT.cusd.request = "AT+CUSD=1,'*100#'\r\n"; //, Request //Чтение баланса SIM-карты
-	AT.cusd.response = INIT_STATE;
+	 AT.cusd.request = "AT+CUSD=1,'*100#'\r\n"; //, Request //Чтение баланса SIM-карты
+	 AT.cusd.response = INIT_STATE;
 
-	AT.cpin.request = "AT+CPIN?\r\n"; //SIM not inserted
-	AT.cpin.response = INIT_STATE;
+	 AT.cpin.request = "AT+CPIN?\r\n"; //SIM not inserted
+	 AT.cpin.response = INIT_STATE;
 
-	AT.sapbrCONTYPE.request = "AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"\r\n";
-	AT.sapbrCONTYPE.response = INIT_STATE;*/
+	 AT.sapbrCONTYPE.request = "AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\"\r\n";
+	 AT.sapbrCONTYPE.response = INIT_STATE;*/
 
 	//AT.sapbrAPN.request = "";*/
 	//"AT+CSQ\r\n" //качество сигнала
-
 	/*queue[0] = "AT\r\n";
-	queue[1] = "AT+CSQ\r\n";
-	queue[2] = "AT+CMGF=1\r\n";
-	queue[3] = "AT+CMGS=\"+79518926260\"\r\n";
-	queue[4] = "hello\x1a\r\n";*/
+	 queue[1] = "AT+CSQ\r\n";
+	 queue[2] = "AT+CMGF=1\r\n";
+	 queue[3] = "AT+CMGS=\"+79518926260\"\r\n";
+	 queue[4] = "hello\x1a\r\n";*/
 	queue[0] = AT_AT;
 	queue[1] = AT_CSQ;
 	queue[2] = AT_CPIN;
 	queue[3] = AT_CMGF;
+	queue[4] = AT_CBC;
+	queue[5] = AT_CSPN;
 
 	HAL_UART_Receive_DMA(&huart1, gprs.rx_buff, RX_BUFFER_SIZE);
 }
@@ -219,7 +231,7 @@ void sendQueue() {
 	if (!gprs.busy) {
 		gprs.busy = true;
 
-		gprs.timeout = HAL_GetTick()+1000;
+		gprs.timeout = HAL_GetTick() + 5000;
 		//gprs.TX = "AT\r\n";
 		//gprs.TX = "AT+CPIN?\r\n"; //..симка//5s
 //		gprs.TX = "AT+CFUN?\r\n"; //1=полная работоспособность//10s
@@ -249,8 +261,8 @@ void sendQueue() {
 		HAL_UART_Transmit_DMA(&huart1, gprs.TX, strlen(gprs.TX));
 	}
 	//if (HAL_GetTick() % 5000 == 0 && gprs.index < 4) {
-		//gprs.index++;
-		//gprs.busy=false;
+	//gprs.index++;
+	//gprs.busy=false;
 
 	//}
 	for (int i = 0; i < RX_BUFFER_SIZE; i++) {
@@ -289,23 +301,57 @@ void checkAT() {
 	gprs.errorPosition = strpos(gprs.RXPointer, "ERROR", 0);
 	// printf ( "error position: %d\n\n", errorPosition );
 
-	if ( (gprs.okPosition > 0 || gprs.errorPosition > 0) || HAL_GetTick()>gprs.timeout ) {
+	if ((gprs.okPosition > 0 || gprs.errorPosition > 0)
+			|| HAL_GetTick() > gprs.timeout) {
 		//AT.at.response = gprs.response;
 		gprs.response = (gprs.okPosition > 0) ? OK :
 						(gprs.errorPosition > 0) ? ERROR : INIT_STATE;
 
 		gprs.at[queue[gprs.index]].response = gprs.response;
+
+		if (gprs.response != ERROR) {
+			if (queue[gprs.index] == AT_CSQ) {
+				char* found = strstr(gprs.RXPointer, "+CSQ: ") + 6;
+				/*size_t len = strlen(found);
+				 char* str2 = (char*) malloc(len + 1);
+				 strcpy(str2, found);
+				 gprs.at[queue[gprs.index]].args = str2;*/
+				gprs.quality = atoi(found);
+			}
+			if (queue[gprs.index] == AT_CBC) {
+				char* found = strstr(gprs.RXPointer, "+CBC: ") + 6;
+				found = strstr(found, ",") + 1;
+				gprs.charge = atoi(found);
+				found = strstr(found, ",") + 1;
+				gprs.voltage = atoi(found);
+				/*size_t len = strlen(found);
+				 char* str2 = (char*) malloc(len + 1);
+				 strcpy(str2, found);
+				 gprs.at[queue[gprs.index]].args = str2;*/
+			}
+			if (queue[gprs.index] == AT_CSPN) {
+				char* found = strstr(gprs.RXPointer, "+CSPN: \"")+8;
+				//size_t quote = strstr(found, "\"") - found;
+				size_t len = strlen(found);
+				char* str2 = (char*) malloc(len + 1);
+				strcpy(str2, found);
+				//str2[len]=0;
+				gprs.at[queue[gprs.index]].args = str2;
+				gprs.operator = str2;
+			}
+		}
+
 		gprs.txPosition = -1;
 		gprs.okPosition = -1;
 		gprs.errorPosition = -1;
 		gprs.response = INIT_STATE;
 		for (int i = 0; i < gprs.i; i++)
 			gprs.RX[i] = 0;
-		gprs.i=0;
-		gprs.busy=false;
+		gprs.i = 0;
+		gprs.busy = false;
 		gprs.index++;
-		if(gprs.index==4)
-			gprs.index=0;
+		if (gprs.index == 6)
+			gprs.index = 0;
 	}
 	/*if (txPosition >= 0) {
 	 if (gprs.TX == AT.at.request) {
