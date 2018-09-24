@@ -47,6 +47,32 @@
             }
 ```
 
+```
+    char buffer[RPI_RX_BUFFER_SIZE] = {20,0,3,0,23,1,1,1,3,0,0};
+
+    char RX[5];
+    for(int i=0;i<RPI_RX_BUFFER_SIZE;i++){
+        char CRC=0;
+        for(int j=0;j<4;j++)
+            CRC = CRC + buffer[((i+j)>RPI_RX_BUFFER_SIZE-1)?(i+j-RPI_RX_BUFFER_SIZE):(i+j)];
+        if(CRC==buffer[((i+4)>RPI_RX_BUFFER_SIZE-1)?(i+4-RPI_RX_BUFFER_SIZE):(i+4)] && buffer[i]!=0){
+            printf("start%d\n",i);
+            for(int k=0;k<5;k++){
+                RX[k]=buffer[((i+k)>RPI_RX_BUFFER_SIZE-1)?(i+k-RPI_RX_BUFFER_SIZE):(i+k)];
+                buffer[((i+k)>RPI_RX_BUFFER_SIZE-1)?(i+k-RPI_RX_BUFFER_SIZE):(i+k)] = 0;
+            }
+            if(RX[0]==20){
+                printf("multiple buffer\n");
+                char CRC2=0;
+                for(int m=0;m<RX[2];m++){
+                    CRC2 += buffer[((i+5+m)>RPI_RX_BUFFER_SIZE-1)?(i+5+m-RPI_RX_BUFFER_SIZE):(i+5+m)];
+                    printf("%d:",buffer[((i+5+m)>RPI_RX_BUFFER_SIZE-1)?(i+5+m-RPI_RX_BUFFER_SIZE):(i+5+m)]);
+                //
+                }
+                printf("\nCRC%d\n",CRC2==buffer[((i+5+RX[2])>RPI_RX_BUFFER_SIZE-1)?(i+5+RX[2]-RPI_RX_BUFFER_SIZE):(i+5+RX[2])]);
+            }
+      
+```
 
 
 * https://github.com/ihormelnyk/arduino_opentherm_controller - opentherm arduino example

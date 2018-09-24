@@ -16,6 +16,8 @@
 
 extern UART_HandleTypeDef huart3;
 
+#define RPI_RX_BUFFER_SIZE 60
+
 #define RPI_BUFFER_SIZE 4
 //toRPIlib
 #define RPi_ECHO_UART_ADDRESS           1
@@ -25,7 +27,8 @@ extern UART_HandleTypeDef huart3;
 #define RPi_SIM800L_UART_ADDRESS		5
 #define RPi_ADC_UART_ADDRESS			6
 #define RPi_OT_STATUS_UART_ADDRESS		7
-#define RPI_MEM_UART_ADDRESS			8
+#define RPi_MEM_UART_ADDRESS			8
+#define RPi_SMS_UART_ADDRESS			9
 //#define RPi
 
 #define RPi_SET_TEMP_UART_ADDRESS       10
@@ -90,6 +93,12 @@ void RPiRoute(void) {
 void RPiRXRoute(void) {
 	int16_t tmp;
 	uint32_t HWID = *(__IO uint32_t *) 0x08010004;
+
+
+
+
+
+
 	for (int i = 0; i < RPI_BUFFER_SIZE; i++)
 		rpiframe.raw[i] = RPi_UART.rx_buff[i];
 
@@ -147,7 +156,7 @@ void RPiRXRoute(void) {
 			rpiframe.frame.data = ot.timeout;
 		RPi_UART.transmitRequered = true;
 		break;
-	case RPI_MEM_UART_ADDRESS:
+	case RPi_MEM_UART_ADDRESS:
 
 		rpiframe.frame.data = HWID & 0xFFFF;
 		RPi_UART.transmitRequered = true;
