@@ -18,7 +18,7 @@ extern UART_HandleTypeDef huart3;
 
 #define RPI_RX_BUFFER_SIZE 60
 
-#define RPI_BUFFER_SIZE 4
+#define RPI_BUFFER_SIZE 5
 //toRPIlib
 #define RPi_ECHO_UART_ADDRESS           1
 #define RPi_BLINK_UART_ADDRESS			2
@@ -33,10 +33,13 @@ extern UART_HandleTypeDef huart3;
 
 #define RPi_SET_TEMP_UART_ADDRESS       10
 #define RPi_GET_HW_TEMP_UART_ADDRESS    11
+
+#define RPi_CRC_ERROR					255
 //toRPIlib
 typedef struct {
 	uint16_t address :16;
 	uint16_t data :16;
+	uint8_t crc :8;
 } RPiFrameStruct;
 
 union RPiFrameUnion {
@@ -56,13 +59,15 @@ SPI_Struct RPi_SPI;
 
 typedef struct {
 	bool transmitRequered;
+	bool crcChecked;
 
 	int len;
 	char* pointer;
 
 	uint16_t address;
 	uint8_t data;
-	uint8_t rx_buff[RPI_BUFFER_SIZE];
+	//uint8_t rx_buff[RPI_BUFFER_SIZE];
+	uint8_t rx_buff[RPI_RX_BUFFER_SIZE];
 	uint8_t tx_buff[RPI_BUFFER_SIZE];
 } UART_Struct;
 UART_Struct RPi_UART;
@@ -70,19 +75,50 @@ UART_Struct RPi_UART;
 void RPiInit(void);
 void RPiRXRoute(void);
 void RPiRoute(void);
+void makeResponse(void);
 
 void RPiInit(void) {
-	HAL_UART_Receive_IT(&huart3, RPi_UART.rx_buff, RPI_BUFFER_SIZE);
+	//HAL_UART_Receive_DMA(&huart3, RPi_UART.rx_buff, RPI_BUFFER_SIZE);
+	HAL_UART_Receive_DMA(&huart3, RPi_UART.rx_buff, RPI_RX_BUFFER_SIZE);
 	RPi_UART.transmitRequered = false;
 	RPi_UART.len = -1;
+	RPi_UART.crcChecked = false;
 	return;
 }
 void RPiRoute(void) {
+	if (!RPi_UART.transmitRequered) {
+		for (int i = 0; i < RPI_RX_BUFFER_SIZE; i++) {
+			char crc_ = 0;
+			for (int j = 0; j < 4; j++) {
+				crc_ += RPi_UART.rx_buff[
+						((i + j) > RPI_RX_BUFFER_SIZE - 1) ?
+								(i + j - RPI_RX_BUFFER_SIZE) : (i + j)];
+			}
+			if (crc_
+					== RPi_UART.rx_buff[
+							((i + 4) > RPI_RX_BUFFER_SIZE - 1) ?
+									(i + 4 - RPI_RX_BUFFER_SIZE) : (i + 4)]
+					&& RPi_UART.rx_buff[i] != 0) {
+				for (int k = 0; k < 5; k++) {
+					rpiframe.raw[k] = RPi_UART.rx_buff[
+							((i + k) > RPI_RX_BUFFER_SIZE - 1) ?
+									(i + k - RPI_RX_BUFFER_SIZE) : (i + k)];
+					RPi_UART.rx_buff[
+							((i + k) > RPI_RX_BUFFER_SIZE - 1) ?
+									(i + k - RPI_RX_BUFFER_SIZE) : (i + k)] = 0;
+				}
+				RPi_UART.crcChecked = true;
+			}
+		}
+	}
+	if (RPi_UART.crcChecked)
+		makeResponse();
 	if (RPi_UART.transmitRequered) {
-		if(RPi_UART.len<0){
+		if (RPi_UART.len < 0) {
 			HAL_UART_Transmit_DMA(&huart3, RPi_UART.tx_buff, RPI_BUFFER_SIZE);
-		}else{
-			HAL_UART_Transmit_DMA(&huart3, RPi_UART.pointer, strlen(RPi_UART.pointer));
+		} else {
+			HAL_UART_Transmit_DMA(&huart3, RPi_UART.pointer,
+					strlen(RPi_UART.pointer));
 			RPi_UART.len = -1;
 		}
 		//HAL_UART_Transmit(&huart3, RPi_UART.tx_buff, RPI_BUFFER_SIZE, 1000);
@@ -90,18 +126,11 @@ void RPiRoute(void) {
 	}
 }
 //toRPIlib
-void RPiRXRoute(void) {
+void makeResponse(void) {
+
 	int16_t tmp;
 	uint32_t HWID = *(__IO uint32_t *) 0x08010004;
-
-
-
-
-
-
-	for (int i = 0; i < RPI_BUFFER_SIZE; i++)
-		rpiframe.raw[i] = RPi_UART.rx_buff[i];
-
+	RPi_UART.crcChecked = false;
 	uint8_t subaddress = rpiframe.frame.address >> 8 & 0xFF;
 	switch (rpiframe.frame.address & 0xff) {
 	case RPi_ECHO_UART_ADDRESS:
@@ -130,18 +159,18 @@ void RPiRXRoute(void) {
 		break;
 	case RPi_SIM800L_UART_ADDRESS:
 		rpiframe.frame.data = gprs.at[subaddress].response;
-		if(subaddress==AT_CSQ)
+		if (subaddress == AT_CSQ)
 			rpiframe.frame.data = gprs.quality;
-		if(subaddress==AT_CBC)
+		if (subaddress == AT_CBC)
 			rpiframe.frame.data = gprs.voltage;
-		if(subaddress==AT_CSPN){
+		if (subaddress == AT_CSPN) {
 			RPi_UART.pointer = gprs.operator;
-			RPi_UART.len=1;
+			RPi_UART.len = 1;
 		}
 		RPi_UART.transmitRequered = true;
 		/*if (subaddress == 0){
-			rpiframe.frame.data = AT.at.response;
-		}*/
+		 rpiframe.frame.data = AT.at.response;
+		 }*/
 		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//ot.RPiResponseLO= frame.frame.data;
 		break;
@@ -188,9 +217,27 @@ void RPiRXRoute(void) {
 		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//RPi_UART.tx_buff
 	}
+
 	for (int i = 0; i < RPI_BUFFER_SIZE; i++)
 		RPi_UART.tx_buff[i] = rpiframe.raw[i];
-	HAL_UART_Receive_IT(&huart3, RPi_UART.rx_buff, RPI_BUFFER_SIZE);
+}
+void RPiRXRoute(void) {
+	HAL_UART_Receive_DMA(&huart3, RPi_UART.rx_buff, RPI_RX_BUFFER_SIZE);
+
+	/*for (int i = 0; i < RPI_BUFFER_SIZE; i++)
+	 rpiframe.raw[i] = RPi_UART.rx_buff[i];
+	 if (rpiframe.frame.crc
+	 == rpiframe.raw[0] + rpiframe.raw[1] + rpiframe.raw[2]
+	 + rpiframe.raw[3]) {
+	 RPi_UART.crcChecked = true;
+	 } else {
+	 rpiframe.frame.address = RPi_CRC_ERROR;
+	 RPi_UART.transmitRequered = true;
+	 for (int i = 0; i < RPI_BUFFER_SIZE; i++)
+	 RPi_UART.tx_buff[i] = rpiframe.raw[i];
+	 }
+
+	 HAL_UART_Receive_DMA(&huart3, RPi_UART.rx_buff, RPI_BUFFER_SIZE);*/
 }
 
 #endif /* RPI_H_ */

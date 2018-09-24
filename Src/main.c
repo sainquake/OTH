@@ -68,6 +68,7 @@ UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart1_tx;
 DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
+DMA_HandleTypeDef hdma_usart3_rx;
 
 /* USER CODE BEGIN PV */
 //#define OT_ONLY
@@ -253,6 +254,7 @@ void HAL_SYSTICK_Callback(void) {
   * @retval None
   */
 int main(void)
+
 {
   /* USER CODE BEGIN 1 */
 	//uint8_t rx[16];
@@ -787,6 +789,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel2_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+  /* DMA1_Channel3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
   /* DMA1_Channel4_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
