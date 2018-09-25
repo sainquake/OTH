@@ -157,7 +157,8 @@ void makeResponse(void) {
 		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//ot.RPiResponseHI = frame.frame.data;
 		break;
-	case RPi_SIM800L_UART_ADDRESS:
+	case RPi_SIM800L_UART_ADDRESS: {
+		uint16_t d = rpiframe.frame.data;
 		rpiframe.frame.data = gprs.at[subaddress].response;
 		if (subaddress == AT_CSQ)
 			rpiframe.frame.data = gprs.quality;
@@ -167,12 +168,26 @@ void makeResponse(void) {
 			RPi_UART.pointer = gprs.operator;
 			RPi_UART.len = 1;
 		}
+		if (subaddress == AT_CUSD) {
+			if (d == 1) {
+				rpiframe.frame.data = 1;
+				gprs.balanceRequered = true;
+				gprs.balanceReceived = false;
+			} else if (d == 2) {
+				rpiframe.frame.data = gprs.balanceReceived;
+			} else {
+				rpiframe.frame.data = round(gprs.balance * 256.0);
+			}
+			//rpiframe.frame.data = 1;
+			//rpiframe.frame.data = d;
+		}
 		RPi_UART.transmitRequered = true;
 		/*if (subaddress == 0){
 		 rpiframe.frame.data = AT.at.response;
 		 }*/
-		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+		//HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//ot.RPiResponseLO= frame.frame.data;
+	}
 		break;
 	case RPi_ADC_UART_ADDRESS:
 		tmp = round(adc.v[rpiframe.frame.address >> 8 & 0x0f] * 256.0);
