@@ -387,7 +387,7 @@ void checkAT() {
 				//gprs.balanceReceived = true;
 			}
 		}
-		if(gprs.balanceRequered && strpos(gprs.RXPointer, "00200440", 0)){
+		if(gprs.balanceRequered && gprs.at[AT_CUSD].response && strpos(gprs.RXPointer, "00200440", 0)){// " p"
 			//check +CUSD and calc balance
 		}
 		gprs.txPosition = -1;
