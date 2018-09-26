@@ -74,6 +74,46 @@
       
 ```
 
+```
+char* buff =
+		"AT+CUSD=1,\"*102#\"\r\r\nOK\r\n\r\n+CUSD: 0, \"00370037002E0030003200200440002E000A041E0431044904300439044204350441044C0020044100200434044004430433043E043C0020043F043E00200053004D00530020043104350441043F043B04";
+
+int fff = strpos(buff, "hello", 0);
+printf("%d\n\n", fff );
+
+printf("%d\n\n", strlen(buff) );
+char* found = strstr(buff, "+CUSD: ");
+//printf(  found+7 );
+
+found = strstr(found + 7, "\"");
+//printf(  found+1 );
+
+//printf("\n\n");
+char* str2 = found + 1;
+int length = strpos(str2, "00200440", 0);		//strlen(str2);
+printf( "len=%d\n\n", length );
+char* buffer = "";
+int i;
+char buf = 0;
+for (i = 0; i < length; i++) {
+	if (i % 2 != 0) {
+		printf("%c", hex_to_ascii(buf, str2[i]));
+		//str2[i/2] = hex_to_ascii(buf, str2[i]);
+		size_t len = strlen(buffer);
+		char* str3 = (char*) malloc(len + 1+1);
+		strcpy(str3, buffer);
+		str3[len] = (char) hex_to_ascii(buf, str2[i]);
+		str3[len+1] = 0;
+		buffer = str3;
+		//gprs.at[gprs.subaddress].args = str2;
+	} else {
+		buf = str2[i];
+	}
+}
+printf("\n\n");
+printf("%f", atof(buffer));
+```
+
 
 * https://github.com/ihormelnyk/arduino_opentherm_controller - opentherm arduino example
 *https://github.com/jpraus/arduino-opentherm/blob/master/src/opentherm.cpp - Parity Bit Function

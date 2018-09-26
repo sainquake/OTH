@@ -362,7 +362,7 @@ void checkAT() {
 				gprs.operator = str2;
 			}
 			if (gprs.subaddress == AT_CUSD) {
-				char* found = strstr(gprs.RXPointer, "+CUSD: ") + 7;
+				/*char* found = strstr(gprs.RXPointer, "+CUSD: ") + 7;
 				found = strstr(found, ",\"") + 2;
 				//size_t quote = strstr(found, "\"") - found;
 				size_t len = strlen(found);
@@ -371,24 +371,25 @@ void checkAT() {
 				//str2[len]=0;
 				gprs.at[gprs.subaddress].args = str2;
 
-
 				int length = strlen(str2);
-				char buffer[length/2];
+				char buffer[length / 2];
 				int i;
 				char buf = 0;
 				for (i = 0; i < length; i++) {
 					if (i % 2 != 0) {
-						buffer[i/2] = hex_to_ascii(buf, str2[i]);
+						buffer[i / 2] = hex_to_ascii(buf, str2[i]);
 					} else {
 						buf = str2[i];
 					}
 				}
-				gprs.balance = atof(&buffer);
-				gprs.balanceRequered = false;
-				gprs.balanceReceived = true;
+				gprs.balance = atof(&buffer);*/
+				//gprs.balanceRequered = false;
+				//gprs.balanceReceived = true;
 			}
 		}
-
+		if(gprs.balanceRequered && strpos(gprs.RXPointer, "00200440", 0)){
+			//check +CUSD and calc balance
+		}
 		gprs.txPosition = -1;
 		gprs.okPosition = -1;
 		gprs.errorPosition = -1;
@@ -403,7 +404,7 @@ void checkAT() {
 				gprs.index = 0;
 		}
 	}
-	if (HAL_GetTick() > gprs.timeout){
+	if (HAL_GetTick() > gprs.timeout) {
 		gprs.timeoutOccured = true;
 		gprs.balanceRequered = false;
 	}
