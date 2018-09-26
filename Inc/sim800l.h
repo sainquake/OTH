@@ -40,6 +40,8 @@ typedef enum {
 	AT_CSQ = 21,
 	AT_CMGF = 22,
 	AT_CBC = 23,
+	AT_CMGR = 24, //read sms from mem
+	AT_CPMS = 25, //count of sms
 	AT_RESPONSE_TIMEOUT = 255
 } AT_Enum;
 
@@ -91,6 +93,8 @@ typedef struct {
 	bool balanceRequered;
 	bool balanceReceived;
 	float balance;
+	uint8_t smsCount;
+	uint8_t smsToRead;
 
 	uint8_t subaddress;
 	bool busy;
@@ -98,7 +102,7 @@ typedef struct {
 	//bool waitForResponse;
 	// char reserved:6;
 	char rx_buff[RX_BUFFER_SIZE];
-	char rxChar[1024];
+	//char rxChar[1024];
 	uint16_t i;
 	// char tx_buff[64];
 	// char RXEcho[128];
@@ -113,12 +117,12 @@ typedef struct {
 	uint32_t timeout;
 	bool RXOvf;
 
-	ATLine_Struct at[32];
+	ATLine_Struct at[256];
 
 	char* TX;
 	char* RXPointer;
 	char* RXFinal;
-	char RX[128];
+	char RX[512];
 } SIM800_Struct; // gprs = {0,0,0,0,"",""};
 
 SIM800_Struct gprs;
@@ -170,6 +174,8 @@ void initAT() {
 	gprs.balanceReceived = false;
 	gprs.balance = 0;
 	gprs.subaddress = 0;
+	gprs.smsCount=0;
+	gprs.smsToRead=2;
 	//gprs.transmitRequered = false;
 	//gprs.waitForResponse = false;
 	gprs.busy = false;
@@ -198,8 +204,14 @@ void initAT() {
 
 	gprs.at[AT_RESPONSE_TIMEOUT].response = gprs.timeoutOccured;
 
-	gprs.at[AT_CUSD].request = "AT+CUSD=1,\"*100#\"\r\n"; //, Request //Чтение баланса SIM-карты
+	gprs.at[AT_CUSD].request = "AT+CUSD=1,\"#102#\"\r\n"; //, Request //Чтение баланса SIM-карты
 	gprs.at[AT_CUSD].response = INIT_STATE;
+
+	gprs.at[AT_CMGR].request = "AT+CMGR=2\r\n"; //read sms from mem
+	gprs.at[AT_CMGR].response = INIT_STATE;
+
+	gprs.at[AT_CPMS].request = "AT+CPMS?\r\n"; //count of sms
+	gprs.at[AT_CPMS].response = INIT_STATE;
 	/*AT.cops.request = "AT+COPS?\r\n";
 	 AT.cops.response = INIT_STATE;
 
@@ -240,6 +252,8 @@ void initAT() {
 	queue[3] = AT_CMGF;
 	queue[4] = AT_CBC;
 	queue[5] = AT_CSPN;
+	queue[6] = AT_CPMS;
+	queue[7] = AT_CMGR;
 
 	HAL_UART_Receive_DMA(&huart1, gprs.rx_buff, RX_BUFFER_SIZE);
 }
@@ -248,49 +262,60 @@ void sendQueue() {
 		gprs.busy = true;
 
 		gprs.timeout = HAL_GetTick() + 5000;
-		//gprs.TX = "AT\r\n";
-		//gprs.TX = "AT+CPIN?\r\n"; //..симка//5s
+//		gprs.TX = "AT\r\n";
+//		gprs.TX = "AT+CPIN?\r\n"; //..симка//5s
 //		gprs.TX = "AT+CFUN?\r\n"; //1=полная работоспособность//10s
-		//gprs.TX = "AT+CBC\r\n"; //напряжение питания
-////		gprs.TX = "AT+CSQ\r\n"; //качество сигнала
-////		gprs.TX = "AT+CPAS\r\n"; // Ожидание готовности GSM-модуля и SIM-карты //2 Unknown (MT is not guaranteed to respond totructions)
-//		gprs.TX = "AT+CSPN?\r\n"; // Чтение имени провайдера
-		//gprs.TX = "AT+CSCS=\"GSM\"\r\n";
-//		gprs.TX = "AT+CREG?\r\n"; //Тип регистрации в сети
+//		gprs.TX = "AT+CBC\r\n"; //напряжение питания
+//		gprs.TX = "AT+CSQ\r\n"; //качество сигнала
+//		gprs.TX = "AT+CPAS\r\n"; // Ожидание готовности GSM-модуля и SIM-карты //2 Unknown (MT is not guaranteed to respond totructions)
+//		//gprs.TX = "AT+CSPN?\r\n"; // Чтение имени провайдера
+//		//gprs.TX = "AT+CSCS=\"GSM\"\r\n";
+//		//gprs.TX = "AT+CREG=1\r\n";
+//		//gprs.TX = "AT+CREG?\r\n"; //Тип регистрации в сети
+//
+//		//gprs.balanceRequered = true;
+//		gprs.TX = "AT+CMGF=1\r\n"; // Текстовый режим (не PDU)
+		//gprs.TX = "AT+CUSD=1,\"#102#\"\r\n"; //, Request //Чтение баланса SIM-карты //20s
+		//gprs.subaddress = AT_CUSD;
+		//gprs.balanceRequered = true;
 
 		//gprs.TX = "AT+CMGF=1\r\n"; // Текстовый режим (не PDU)
-		//gprs.TX = "AT+CUSD=1,\"*102#\"\r\n"; //, Request //Чтение баланса SIM-карты //20s
+		/*if(gprs.index==0)
+		 gprs.TX = "AT+CMGS=\"+79063280423\"\r\n";//sms
+		 if(gprs.index==1)
+		 gprs.TX = "hello\x1a\r\n";*/
 
-//		gprs.TX = "AT+CMGF=1\r\n"; // Текстовый режим (не PDU)
-//		gprs.TX = "AT+CMGS=\"+79518926260\"\r\n";//sms
-//		gprs.TX = "hello\x1a\r\n";
-
-		//gprs.TX = "AT+CMGL=4\r\n";
-		//gprs.TX = "AT+CMGR=3\r\n";
+		//gprs.TX = "AT+CMGL=\"ALL\"\r\n";
+		//gprs.TX = "AT+CMGR=2\r\n";
+		//gprs.TX = "AT+CPMS?\r\n";//сколько смсок
 		//gprs.TX = "AT+CPMS=\"MT\"\r\n";
-
 		//gprs.TX = "AT+CCID\r\n";
 		//gprs.TX = AT.cops.request;
-
 		//gprs.TX = "hello\x1a";
 		gprs.subaddress = queue[gprs.index];
-		if (gprs.balanceRequered) {
+		if (gprs.balanceRequered && !gprs.balanceReceived) {
 			gprs.subaddress = AT_CUSD;
-			//gprs.balanceRequered = false;
+		}
+		if (gprs.subaddress == AT_CMGR) {
+			//sprintf(gprs.at[gprs.subaddress].request, "AT+CMGR=%d\r\n", gprs.smsToRead);
+			/*gprs.at[gprs.subaddress].request = "AT+CMGR=";
+			char* num;
+			itoa(gprs.smsToRead, num, 10);
+			strcat(gprs.at[gprs.subaddress].request, num);
+			strcat(gprs.at[gprs.subaddress].request, "\r\n");*/
 		}
 		gprs.TX = gprs.at[gprs.subaddress].request;
 		HAL_UART_Transmit_DMA(&huart1, gprs.TX, strlen(gprs.TX));
 	}
-	//if (HAL_GetTick() % 5000 == 0 && gprs.index < 4) {
-	//gprs.index++;
-	//gprs.busy=false;
-
-	//}
+	/*if (HAL_GetTick() % 1000 == 0 && gprs.index < 2) {
+	 gprs.index++;
+	 gprs.busy=false;
+	 }*/
 	for (int i = 0; i < RX_BUFFER_SIZE; i++) {
 		if (gprs.rx_buff[i] != '\0') {
 			gprs.RX[gprs.i] = gprs.rx_buff[i];
 			gprs.i++;
-			if (gprs.i == 128)
+			if (gprs.i == 512)
 				gprs.i = 0;
 		}
 		gprs.rx_buff[i] = '\0';
@@ -361,46 +386,74 @@ void checkAT() {
 				gprs.at[gprs.subaddress].args = str2;
 				gprs.operator = str2;
 			}
-			if (gprs.subaddress == AT_CUSD) {
-				/*char* found = strstr(gprs.RXPointer, "+CUSD: ") + 7;
-				found = strstr(found, ",\"") + 2;
-				//size_t quote = strstr(found, "\"") - found;
+			if (gprs.subaddress == AT_CPMS) {
+				char* found = strstr(gprs.RXPointer, "\"MT\",") + 5;
+				gprs.smsCount = atoi(found);
+			}
+			if (gprs.subaddress == AT_CMGR) {
+				char* found = strstr(gprs.RXPointer, "+CMGR: ") + 7;
 				size_t len = strlen(found);
 				char* str2 = (char*) malloc(len + 1);
 				strcpy(str2, found);
-				//str2[len]=0;
 				gprs.at[gprs.subaddress].args = str2;
+			}
+			if (gprs.subaddress == AT_CUSD) {
+				/*char* found = strstr(gprs.RXPointer, "+CUSD: ") + 7;
+				 found = strstr(found, ",\"") + 2;
+				 //size_t quote = strstr(found, "\"") - found;
+				 size_t len = strlen(found);
+				 char* str2 = (char*) malloc(len + 1);
+				 strcpy(str2, found);
+				 //str2[len]=0;
+				 gprs.at[gprs.subaddress].args = str2;
 
-				int length = strlen(str2);
-				char buffer[length / 2];
-				int i;
-				char buf = 0;
-				for (i = 0; i < length; i++) {
-					if (i % 2 != 0) {
-						buffer[i / 2] = hex_to_ascii(buf, str2[i]);
-					} else {
-						buf = str2[i];
-					}
-				}
-				gprs.balance = atof(&buffer);*/
+				 int length = strlen(str2);
+				 char buffer[length / 2];
+				 int i;
+				 char buf = 0;
+				 for (i = 0; i < length; i++) {
+				 if (i % 2 != 0) {
+				 buffer[i / 2] = hex_to_ascii(buf, str2[i]);
+				 } else {
+				 buf = str2[i];
+				 }
+				 }
+				 gprs.balance = atof(&buffer);*/
+
+				/*size_t len = strlen(gprs.RXPointer);
+				 char* str2 = (char*) malloc(len + 1);
+				 strcpy(str2, gprs.RXPointer);
+				 gprs.at[gprs.subaddress].args = str2;*/
+
 				//gprs.balanceRequered = false;
 				//gprs.balanceReceived = true;
 			}
 		}
-		if(gprs.balanceRequered && gprs.at[AT_CUSD].response && strpos(gprs.RXPointer, "00200440", 0)){// " p"
-			//check +CUSD and calc balance
+		if (gprs.balanceRequered && gprs.at[AT_CUSD].response == 1
+				&& strpos(gprs.RXPointer, " r.", 0) > 0) {				// " p"
+				//check +CUSD and calc balance
+				//gprs.txPosition = -1;
+			char* found = strstr(gprs.RXPointer, "balans ") + 7;
+			//found = strstr(found + 7, "\" ")+2;
+			gprs.balance = atof(found);
+			/*size_t len = strpos(found, " r.", 0);
+			 char* str2 = (char*) malloc(len + 1);
+			 strcpy(str2, found);*/
+			//gprs.at[gprs.subaddress].args = str2;
+			gprs.balanceReceived = true;
+			gprs.balanceRequered = false;
 		}
 		gprs.txPosition = -1;
 		gprs.okPosition = -1;
 		gprs.errorPosition = -1;
 		gprs.response = INIT_STATE;
-		for (int i = 0; i < gprs.i; i++)
-			gprs.RX[i] = 0;
-		gprs.i = 0;
-		gprs.busy = false;
 		if (!gprs.balanceRequered) {
+			for (int i = 0; i < gprs.i; i++)
+				gprs.RX[i] = 0;
+			gprs.i = 0;
+			gprs.busy = false;
 			gprs.index++;
-			if (gprs.index == 6)
+			if (gprs.index == 8)
 				gprs.index = 0;
 		}
 	}

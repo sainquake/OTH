@@ -181,6 +181,17 @@ void makeResponse(void) {
 			//rpiframe.frame.data = 1;
 			//rpiframe.frame.data = d;
 		}
+		if (subaddress == AT_CPMS){
+			rpiframe.frame.data = gprs.smsCount;
+		}
+		if (subaddress == AT_CMGR){
+			if(d!=0){
+			gprs.smsToRead = d;
+			}else{
+				RPi_UART.pointer = gprs.at[AT_CMGR].args;
+				RPi_UART.len = 1;
+			}
+		}
 		RPi_UART.transmitRequered = true;
 		/*if (subaddress == 0){
 		 rpiframe.frame.data = AT.at.response;
