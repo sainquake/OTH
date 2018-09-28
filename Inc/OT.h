@@ -106,6 +106,7 @@ typedef struct {
 	bool complete;
 	bool frameSendedAndStartWaitingACK;
 	bool readingResponse;
+	uint32_t dataRegisters[128];
 } OT_Struct;
 OT_Struct ot;
 
@@ -243,7 +244,8 @@ void OTRoute(void) {
 			while (!checkTimerOVF()) {
 			}
 			ot.rx.raw = calculateResponse();
-			ot.reg[OTCommon.index] = ot.rx.raw;	//sendRequest( requests[OTCommon.index] );
+			//ot.reg[OTCommon.index] = ot.rx.raw;	//sendRequest( requests[OTCommon.index] );
+			ot.dataRegisters[ot.rx.frame.DATA_ID] = ot.rx.raw;
 
 			if (checkParity(ot.rx.raw) == ot.rx.frame.PARITY
 					&& (ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_READ_ACK

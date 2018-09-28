@@ -157,6 +157,7 @@ AT_Struct AT;
 int hex_to_int(char c);
 int hex_to_ascii(char c, char d);
 int strpos(char* hay, char* needle, int offset);
+char* atCMGRPrepare(uint8_t smsToRead_);
 
 void initAT() {
 	gprs.TX = "";
@@ -297,6 +298,7 @@ void sendQueue() {
 			gprs.subaddress = AT_CUSD;
 		}
 		if (gprs.subaddress == AT_CMGR) {
+			gprs.at[gprs.subaddress].request = atCMGRPrepare(3);
 			//sprintf(gprs.at[gprs.subaddress].request, "AT+CMGR=%d\r\n", gprs.smsToRead);
 			/*gprs.at[gprs.subaddress].request = "AT+CMGR=";
 			char* num;
@@ -530,5 +532,16 @@ int strpos(char* hay, char* needle, int offset) {
 	if (p)
 		return p - haystack + offset;
 	return -1;
+}
+char* atCMGRPrepare(uint8_t smsToRead_){
+    char num[10];
+    itoa(smsToRead_, num, 10);
+    unsigned int len = strlen(num);
+    char* req = (char*) malloc(8+len +2+ 1);
+    strcpy(req, "AT+CMGR=");
+    strcat(req, num);
+    strcat(req, "\r\n");
+    req[8+len+2]=0;
+    return req;
 }
 #endif /* SIM800L_H_ */
