@@ -254,7 +254,6 @@ void HAL_SYSTICK_Callback(void) {
   * @retval None
   */
 int main(void)
-
 {
   /* USER CODE BEGIN 1 */
 	//uint8_t rx[16];

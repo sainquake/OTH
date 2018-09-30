@@ -173,10 +173,13 @@ void initAT() {
 	gprs.timeoutOccured = false;
 	gprs.balanceRequered = false;
 	gprs.balanceReceived = false;
+	gprs.voltage =0;
+	gprs.charge = 0;
 	gprs.balance = 0;
 	gprs.subaddress = 0;
 	gprs.smsCount=0;
 	gprs.smsToRead=2;
+	gprs.operator = "NO DATA";
 	//gprs.transmitRequered = false;
 	//gprs.waitForResponse = false;
 	gprs.busy = false;
@@ -210,6 +213,7 @@ void initAT() {
 
 	gprs.at[AT_CMGR].request = "AT+CMGR=2\r\n"; //read sms from mem
 	gprs.at[AT_CMGR].response = INIT_STATE;
+	gprs.at[AT_CMGR].args = "NO DATA";
 
 	gprs.at[AT_CPMS].request = "AT+CPMS?\r\n"; //count of sms
 	gprs.at[AT_CPMS].response = INIT_STATE;
@@ -298,7 +302,7 @@ void sendQueue() {
 			gprs.subaddress = AT_CUSD;
 		}
 		if (gprs.subaddress == AT_CMGR) {
-			gprs.at[gprs.subaddress].request = atCMGRPrepare(3);
+			gprs.at[gprs.subaddress].request = atCMGRPrepare(gprs.smsToRead);
 			//sprintf(gprs.at[gprs.subaddress].request, "AT+CMGR=%d\r\n", gprs.smsToRead);
 			/*gprs.at[gprs.subaddress].request = "AT+CMGR=";
 			char* num;

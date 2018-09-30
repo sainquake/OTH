@@ -34,6 +34,7 @@ extern UART_HandleTypeDef huart3;
 #define RPi_SET_TEMP_UART_ADDRESS       10
 #define RPi_GET_HW_TEMP_UART_ADDRESS    11
 
+#define RPi_RESET_MCU					254
 #define RPi_CRC_ERROR					255
 //toRPIlib
 typedef struct {
@@ -232,9 +233,12 @@ void makeResponse(void) {
 		// RPi_UART.tx_buff[i] = rpiframe.raw[i];
 		RPi_UART.transmitRequered = true;
 		break;
+	case RPi_RESET_MCU:
+		//NVIC_SystemReset();
+		break;
 	}
 
-	if (RPi_UART.rx_buff[0] == 'H' && RPi_UART.rx_buff[1] == 'e'
+	/*if (RPi_UART.rx_buff[0] == 'H' && RPi_UART.rx_buff[1] == 'e'
 			&& RPi_UART.rx_buff[2] == 'l') {
 		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 	}
@@ -242,7 +246,7 @@ void makeResponse(void) {
 			&& RPi_UART.rx_buff[2] == 'p') {
 		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 		//RPi_UART.tx_buff
-	}
+	}*/
 
 	for (int i = 0; i < RPI_BUFFER_SIZE; i++)
 		RPi_UART.tx_buff[i] = rpiframe.raw[i];
