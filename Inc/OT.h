@@ -68,7 +68,7 @@ unsigned long requests[] = {
 		((0x80000000) | (((long) 127) << 16)),  //
 		};
 
-uint8_t req[] = { 3, 5, 6, 9, 10, 12, 13, 15, 17, 18, 19, 24, 124, 127 };
+uint8_t readReq[] = {0,5,15,115, 3,125,127, 17,18,19,25,26,27,28,31,32,33,116,117,118,119,120,121,122,123, 15 };
 
 typedef struct {
 	uint16_t targetTemp;
@@ -225,13 +225,36 @@ void OTRoute(void) {
 		// for (OTCommon.index=0; OTCommon.index < OT_QUEUE_LENGTH; OTCommon.index++) {
 		//HAL_Delay(300);
 
-		if(OTCommon.index==2)
-			requests[OTCommon.index] = ((0x90000000) | (((long) 1) << 16)) + OTCommon.targetTemp*256;
-		ot.tx.raw = requests[OTCommon.index];
+		/*if(OTCommon.index==2){
+			OTFrameStruct req1;
+			req1.DATA_ID = 1;
+			req1.MSG_TYPE = OT_MSG_TYPE_M_WRITE_DATA;
+			req1.PARITY = 1;
+			req1.DATA_VALUE = OTCommon.targetTemp;
+			union OTFrameUnion reqU;
+			reqU.frame = req1;
+			requests[OTCommon.index] = reqU.raw;//((0x90000000) | (((long) 1) << 16)) + OTCommon.targetTemp;
+		}*/
+		union OTFrameUnion reqU;
+		//reqU.raw = ot.dataRegisters[readReq[OTCommon.index]];
+
+							OTFrameStruct req1;
+							req1.DATA_ID = readReq[OTCommon.index];
+							req1.MSG_TYPE = OT_MSG_TYPE_M_READ_DATA;
+							//if(reqU.frame.MSG_TYPE == OT_MSG_TYPE_S_UNKNOWN_DATAID)
+							//	req1.PARITY = 1;
+							//else
+								req1.PARITY = 0;
+							req1.DATA_VALUE = 0;
+
+							reqU.frame = req1;
+							//requests[OTCommon.index] = reqU.raw;
+
+		ot.tx.raw = reqU.raw;//requests[OTCommon.index];
 		//ot.tx.raw = 0;
 		//ot.tx.frame.DATA_ID = req[index];
 		//ot.tx.frame.PARITY = checkParity( ot.tx.raw );
-		sendFrame(requests[OTCommon.index]);
+		sendFrame(ot.tx.raw);
 
 		//waitForResponse();
 		startWaiting();
@@ -258,6 +281,8 @@ void OTRoute(void) {
 			if (checkParity(ot.rx.raw) == ot.rx.frame.PARITY
 					&& (ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_READ_ACK
 							|| ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_WRITE_ACK)) {
+
+
 				dv.raw = ot.rx.frame.DATA_VALUE;
 				if (ot.rx.frame.DATA_ID == 0) {
 					OTDR.ID0 = dv.ID0;
@@ -276,10 +301,11 @@ void OTRoute(void) {
 			}
 			//ot.rx.frame.MSG_TYPE;
 
-			OTCommon.index++;
-			if (OTCommon.index >= OT_QUEUE_LENGTH)
-				OTCommon.index = 0;
 
+			if (OTCommon.index > (sizeof(readReq) / sizeof(uint8_t)))
+				OTCommon.index = 0;
+			else
+				OTCommon.index++;
 			//OTCommon.busy = true;
 			// }
 			//HAL_Delay(300);
@@ -298,7 +324,7 @@ void initOT(void) {
 	ot.readingResponse = false;
 	OTCommon.index = 0;
 	OTCommon.busy = false;
-	OTCommon.targetTemp = 25;
+	OTCommon.targetTemp = 0;
 }
 void setIdleState(void) {
 	HAL_GPIO_WritePin(OT_RXO_GPIO_Port, OT_RXO_Pin, GPIO_PIN_SET);
