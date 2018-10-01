@@ -42,6 +42,7 @@ typedef enum {
 	AT_CBC = 23,
 	AT_CMGR = 24, //read sms from mem
 	AT_CPMS = 25, //count of sms
+	AT_CMGDA = 26,
 	AT_RESPONSE_TIMEOUT = 255
 } AT_Enum;
 
@@ -97,6 +98,11 @@ typedef struct {
 	uint8_t smsToRead;
 
 	uint8_t subaddress;
+
+	//perform specific request
+	uint8_t subds;
+	bool specificRequest;
+	//
 	bool busy;
 	//bool transmitRequered;
 	//bool waitForResponse;
@@ -175,8 +181,10 @@ void initAT() {
 	gprs.balanceReceived = false;
 	gprs.balance = 0;
 	gprs.subaddress = 0;
-	gprs.smsCount=0;
-	gprs.smsToRead=2;
+	gprs.smsCount = 0;
+	gprs.smsToRead = 2;
+	gprs.specificRequest = false;
+	gprs.subds = 0;
 	//gprs.transmitRequered = false;
 	//gprs.waitForResponse = false;
 	gprs.busy = false;
@@ -213,6 +221,9 @@ void initAT() {
 
 	gprs.at[AT_CPMS].request = "AT+CPMS?\r\n"; //count of sms
 	gprs.at[AT_CPMS].response = INIT_STATE;
+
+	gprs.at[AT_CMGDA].request = "AT+CMGDA=\"DEL ALL\"\r\n"; //count of sms
+	gprs.at[AT_CMGDA].response = INIT_STATE;
 	/*AT.cops.request = "AT+COPS?\r\n";
 	 AT.cops.response = INIT_STATE;
 
@@ -297,14 +308,16 @@ void sendQueue() {
 		if (gprs.balanceRequered && !gprs.balanceReceived) {
 			gprs.subaddress = AT_CUSD;
 		}
+		if(gprs.specificRequest)
+			gprs.subaddress = gprs.sub;
 		if (gprs.subaddress == AT_CMGR) {
 			gprs.at[gprs.subaddress].request = atCMGRPrepare(3);
 			//sprintf(gprs.at[gprs.subaddress].request, "AT+CMGR=%d\r\n", gprs.smsToRead);
 			/*gprs.at[gprs.subaddress].request = "AT+CMGR=";
-			char* num;
-			itoa(gprs.smsToRead, num, 10);
-			strcat(gprs.at[gprs.subaddress].request, num);
-			strcat(gprs.at[gprs.subaddress].request, "\r\n");*/
+			 char* num;
+			 itoa(gprs.smsToRead, num, 10);
+			 strcat(gprs.at[gprs.subaddress].request, num);
+			 strcat(gprs.at[gprs.subaddress].request, "\r\n");*/
 		}
 		gprs.TX = gprs.at[gprs.subaddress].request;
 		HAL_UART_Transmit_DMA(&huart1, gprs.TX, strlen(gprs.TX));
@@ -431,6 +444,8 @@ void checkAT() {
 				//gprs.balanceReceived = true;
 			}
 		}
+		if(gprs.specificRequest)
+			gprs.specificRequest = false;
 		if (gprs.balanceRequered && gprs.at[AT_CUSD].response == 1
 				&& strpos(gprs.RXPointer, " r.", 0) > 0) {				// " p"
 				//check +CUSD and calc balance
@@ -533,15 +548,15 @@ int strpos(char* hay, char* needle, int offset) {
 		return p - haystack + offset;
 	return -1;
 }
-char* atCMGRPrepare(uint8_t smsToRead_){
-    char num[10];
-    itoa(smsToRead_, num, 10);
-    unsigned int len = strlen(num);
-    char* req = (char*) malloc(8+len +2+ 1);
-    strcpy(req, "AT+CMGR=");
-    strcat(req, num);
-    strcat(req, "\r\n");
-    req[8+len+2]=0;
-    return req;
+char* atCMGRPrepare(uint8_t smsToRead_) {
+	char num[10];
+	itoa(smsToRead_, num, 10);
+	unsigned int len = strlen(num);
+	char* req = (char*) malloc(8 + len + 2 + 1);
+	strcpy(req, "AT+CMGR=");
+	strcat(req, num);
+	strcat(req, "\r\n");
+	req[8 + len + 2] = 0;
+	return req;
 }
 #endif /* SIM800L_H_ */
