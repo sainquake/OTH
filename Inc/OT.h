@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define OT_QUEUE_LENGTH 17
+#define OT_QUEUE_LENGTH 18
 //OT defenititons
 #define OT_MSG_TYPE_SHIFT				28
 #define OT_MSG_TYPE_M_READ_DATA			0
@@ -49,17 +49,22 @@ unsigned long requests[] = {
 		0x300, //0 get status
 		//0x90014000, //1 set CH temp //64C
 		//0x80190000, //25 Boiler water temperature
-		0, ((0x00000000) | (((long) 3) << 16)), ((0x00000000)
-				| (((long) 5) << 16)), ((0x00000000) | (((long) 6) << 16)),
+		0,
+		((0x90000000) | (((long) 1) << 16)),
+		((0x00000000) | (((long) 3) << 16)),
+		((0x00000000) | (((long) 5) << 16)),
+		((0x00000000) | (((long) 6) << 16)),
 		((0x00000000) | (((long) 9) << 16)),
-		((0x00000000) | (((long) 10) << 16)), ((0x00000000)
-				| (((long) 12) << 16)),
+		((0x00000000) | (((long) 10) << 16)),
+		((0x00000000) | (((long) 12) << 16)),
 		((0x80000000) | (((long) 13) << 16)),  //
-		((0x00000000) | (((long) 15) << 16)), ((0x00000000)
-				| (((long) 17) << 16)), ((0x00000000) | (((long) 18) << 16)),
+		((0x00000000) | (((long) 15) << 16)),
+		((0x00000000) | (((long) 17) << 16)),
+		((0x00000000) | (((long) 18) << 16)),
 		((0x80000000) | (((long) 19) << 16)),  //
 		((0x00000000) | (((long) 24) << 16)),  //
-		0x807c0000, ((0x00000000) | (((long) 125) << 16)),  //
+		0x807c0000,
+		((0x00000000) | (((long) 125) << 16)),  //
 		((0x80000000) | (((long) 127) << 16)),  //
 		};
 
@@ -219,6 +224,9 @@ void OTRoute(void) {
 		//OT
 		// for (OTCommon.index=0; OTCommon.index < OT_QUEUE_LENGTH; OTCommon.index++) {
 		//HAL_Delay(300);
+
+		if(OTCommon.index==2)
+			requests[OTCommon.index] = ((0x90000000) | (((long) 1) << 16)) + OTCommon.targetTemp*256;
 		ot.tx.raw = requests[OTCommon.index];
 		//ot.tx.raw = 0;
 		//ot.tx.frame.DATA_ID = req[index];
@@ -290,6 +298,7 @@ void initOT(void) {
 	ot.readingResponse = false;
 	OTCommon.index = 0;
 	OTCommon.busy = false;
+	OTCommon.targetTemp = 25;
 }
 void setIdleState(void) {
 	HAL_GPIO_WritePin(OT_RXO_GPIO_Port, OT_RXO_Pin, GPIO_PIN_SET);
