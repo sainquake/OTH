@@ -69,11 +69,12 @@ unsigned long requests[] = {
 		};
 
 uint8_t readReq[] = {0,5,15,115, 3,125,127, 17,18,19,25,26,27,28,31,32,33,116,117,118,119,120,121,122,123, 15 };
+#define RRLEN 26
 
 typedef struct {
 	uint16_t targetTemp;
-	int index;
-	bool busy;
+	//int index;
+	//bool busy;
 } OTCommonStruct;
 OTCommonStruct OTCommon;
 
@@ -112,6 +113,7 @@ typedef struct {
 	bool frameSendedAndStartWaitingACK;
 	bool readingResponse;
 	uint32_t dataRegisters[128];
+	uint8_t index;
 } OT_Struct;
 OT_Struct ot;
 
@@ -221,11 +223,14 @@ uint32_t calculateResponse(void);
 void OTRoute(void) {
 	if (!ot.busy) {
 		ot.busy = true;
+//		ot.complete = false;
+//		ot.frameSendedAndStartWaitingACK = false;
+//		ot.readingResponse = false;
 		//OT
-		// for (OTCommon.index=0; OTCommon.index < OT_QUEUE_LENGTH; OTCommon.index++) {
+		// for (ot.index=0; ot.index < OT_QUEUE_LENGTH; ot.index++) {
 		//HAL_Delay(300);
 
-		/*if(OTCommon.index==2){
+		/*if(ot.index==2){
 			OTFrameStruct req1;
 			req1.DATA_ID = 1;
 			req1.MSG_TYPE = OT_MSG_TYPE_M_WRITE_DATA;
@@ -233,24 +238,24 @@ void OTRoute(void) {
 			req1.DATA_VALUE = OTCommon.targetTemp;
 			union OTFrameUnion reqU;
 			reqU.frame = req1;
-			requests[OTCommon.index] = reqU.raw;//((0x90000000) | (((long) 1) << 16)) + OTCommon.targetTemp;
+			requests[ot.index] = reqU.raw;//((0x90000000) | (((long) 1) << 16)) + OTCommon.targetTemp;
 		}*/
 		union OTFrameUnion reqU;
-		//reqU.raw = ot.dataRegisters[readReq[OTCommon.index]];
+		reqU.raw = ot.dataRegisters[readReq[ot.index]];
 
 							OTFrameStruct req1;
-							req1.DATA_ID = readReq[OTCommon.index];
+							req1.DATA_ID = readReq[ot.index];
 							req1.MSG_TYPE = OT_MSG_TYPE_M_READ_DATA;
-							//if(reqU.frame.MSG_TYPE == OT_MSG_TYPE_S_UNKNOWN_DATAID)
-							//	req1.PARITY = 1;
-							//else
+							if(reqU.frame.MSG_TYPE == OT_MSG_TYPE_S_UNKNOWN_DATAID)
+								req1.PARITY = 1;
+							else
 								req1.PARITY = 0;
 							req1.DATA_VALUE = 0;
 
 							reqU.frame = req1;
-							//requests[OTCommon.index] = reqU.raw;
+							//requests[ot.index] = reqU.raw;
 
-		ot.tx.raw = reqU.raw;//requests[OTCommon.index];
+		ot.tx.raw = reqU.raw;//requests[ot.index];
 		//ot.tx.raw = 0;
 		//ot.tx.frame.DATA_ID = req[index];
 		//ot.tx.frame.PARITY = checkParity( ot.tx.raw );
@@ -275,14 +280,13 @@ void OTRoute(void) {
 			while (!checkTimerOVF()) {
 			}
 			ot.rx.raw = calculateResponse();
-			//ot.reg[OTCommon.index] = ot.rx.raw;	//sendRequest( requests[OTCommon.index] );
-			ot.dataRegisters[ot.rx.frame.DATA_ID] = ot.rx.raw;
+			//ot.reg[ot.index] = ot.rx.raw;	//sendRequest( requests[ot.index] );
+			//ot.dataRegisters[ot.rx.frame.DATA_ID] = ot.rx.raw;
 
-			if (checkParity(ot.rx.raw) == ot.rx.frame.PARITY
-					&& (ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_READ_ACK
+			if ( (ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_READ_ACK
 							|| ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_WRITE_ACK)) {
 
-
+				ot.dataRegisters[ot.rx.frame.DATA_ID] = ot.rx.raw;
 				dv.raw = ot.rx.frame.DATA_VALUE;
 				if (ot.rx.frame.DATA_ID == 0) {
 					OTDR.ID0 = dv.ID0;
@@ -302,16 +306,32 @@ void OTRoute(void) {
 			//ot.rx.frame.MSG_TYPE;
 
 
-			if (OTCommon.index > (sizeof(readReq) / sizeof(uint8_t)))
-				OTCommon.index = 0;
-			else
-				OTCommon.index++;
+			if (ot.index > RRLEN){
+				ot.index = 0;
+			}else{
+				ot.index++;
+				HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+			}
 			//OTCommon.busy = true;
 			// }
 			//HAL_Delay(300);
 		}
 		ot.complete = true;
 	}
+//	if(ot.frameSendedAndStartWaitingACK && ot.timeout){
+//		ot.busy = false;
+//		ot.complete = false;
+//		ot.frameSendedAndStartWaitingACK = false;
+//		ot.readingResponse = false;
+//		ot.timeout = false;
+////		if (ot.index > RRLEN){
+////			ot.index = 0;
+////		}else{
+////			ot.index++;
+////		}
+////		HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_1);
+////		HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_2);
+//	}
 	if (ot.readingResponse && checkTimerOVF()) {
 		ot.readingResponse = false;
 
@@ -322,8 +342,9 @@ void initOT(void) {
 	ot.complete = false;
 	ot.frameSendedAndStartWaitingACK = false;
 	ot.readingResponse = false;
-	OTCommon.index = 0;
-	OTCommon.busy = false;
+	ot.timeout = false;
+	ot.index = 0;
+	//OTCommon.busy = false;
 	OTCommon.targetTemp = 0;
 }
 void setIdleState(void) {
@@ -407,10 +428,11 @@ volatile bool rised = false;
 volatile uint32_t risedCount;
 void startWaiting() {
 	rised = false;
+	ot.timeout = false;
 	TIM2->PSC = 64000;
-	TIM2->ARR = 900;
+	TIM2->ARR =1200;
 	htim2.Init.Prescaler = 64000;
-	htim2.Init.Period = 900;
+	htim2.Init.Period = 1200;
 	HAL_TIM_Base_Init(&htim2);
 	HAL_TIM_IC_Init(&htim2);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);

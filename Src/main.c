@@ -71,6 +71,8 @@ DMA_HandleTypeDef hdma_usart3_tx;
 DMA_HandleTypeDef hdma_usart3_rx;
 
 /* USER CODE BEGIN PV */
+//#define NO_RPI
+#define NO_GSM
 //#define OT_ONLY
 uint32_t micros;
 
@@ -238,7 +240,9 @@ void HAL_SYSTICK_Callback(void) {
 //	}
 	//strstr( gprs.RX, "in" );
 	//if(index>=0)
+#ifndef NO_GSM
 	checkAT();
+#endif
 	if (HAL_GetTick() % 5000 == 0)
 		OWTick();
 	if (HAL_GetTick() % 300 == 0 && ot.complete) {
@@ -299,9 +303,13 @@ int main(void)
 	//HAL_TIM_Base_Stop_IT(&htim4);
 
 	initADC();
+#ifndef NO_RPI
 	RPiInit();
+#endif
 	OWInit();
+#ifndef NO_GSM
 	initAT();
+#endif
 
 	initOT();
 	activateBoiler();
@@ -385,10 +393,13 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-
+#ifndef NO_GSM
 		sendQueue();
+#endif
 		OWRoute();
+#ifndef NO_RPI
 		RPiRoute();
+#endif
 		routeADC();
 		OTRoute();
 		/*OWTransmit();//HAL_UART_Transmit(&huart2,&convert_T,16,5000);

@@ -29,6 +29,7 @@ extern UART_HandleTypeDef huart3;
 #define RPi_OT_STATUS_UART_ADDRESS		7
 #define RPi_MEM_UART_ADDRESS			8
 #define RPi_SMS_UART_ADDRESS			9
+#define RPi_OT_HEADER_UART_ADDRESS		32
 //#define RPi
 
 #define RPi_SET_TEMP_UART_ADDRESS       10
@@ -150,7 +151,12 @@ void makeResponse(void) {
 		break;
 	case RPi_OT_UART_ADDRESS:
 		tmp = rpiframe.frame.address >> 8 & 0xEF;
-		rpiframe.frame.data = OTDR.ID3.SlaveMemberID;
+		rpiframe.frame.data = ot.dataRegisters[tmp]&0xFFFF;//OTDR.ID3.SlaveMemberID;
+		RPi_UART.transmitRequered = true;
+		break;
+	case RPi_OT_HEADER_UART_ADDRESS:
+		tmp = rpiframe.frame.address >> 8 & 0xEF;
+		rpiframe.frame.data = (ot.dataRegisters[tmp]>>16)&0xFFFF;//OTDR.ID3.SlaveMemberID;
 		RPi_UART.transmitRequered = true;
 		break;
 	case 4:
@@ -210,6 +216,24 @@ void makeResponse(void) {
 	case RPi_OT_STATUS_UART_ADDRESS:
 		if (subaddress == 0)
 			rpiframe.frame.data = ot.timeout;
+		if (subaddress == 1)
+			rpiframe.frame.data = ot.index;
+		if (subaddress == 2)
+			rpiframe.frame.data = ot.busy;
+		if (subaddress == 3)
+			rpiframe.frame.data = ot.complete;
+		if (subaddress == 4)
+			rpiframe.frame.data = ot.frameSendedAndStartWaitingACK;
+		if (subaddress == 5)
+			rpiframe.frame.data = ot.readingResponse;
+		if (subaddress == 6){
+			rpiframe.frame.data = (ot.timeout) +
+			(ot.busy<<1) +
+			(ot.complete<<2)+
+			(ot.frameSendedAndStartWaitingACK<<3)+
+			(ot.readingResponse<<4)+
+			(ot.index<<8);
+		}
 		RPi_UART.transmitRequered = true;
 		break;
 	case RPi_MEM_UART_ADDRESS:
