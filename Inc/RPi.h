@@ -150,12 +150,12 @@ void makeResponse(void) {
 		ot.RPiRequestHI = rpiframe.frame.data;
 		break;
 	case RPi_OT_UART_ADDRESS:
-		tmp = rpiframe.frame.address >> 8 & 0xEF;
+		tmp = (rpiframe.frame.address >> 8) & 0x7F;
 		rpiframe.frame.data = ot.dataRegisters[tmp]&0xFFFF;//OTDR.ID3.SlaveMemberID;
 		RPi_UART.transmitRequered = true;
 		break;
 	case RPi_OT_HEADER_UART_ADDRESS:
-		tmp = rpiframe.frame.address >> 8 & 0xEF;
+		tmp = (rpiframe.frame.address >> 8) & 0x7F;
 		rpiframe.frame.data = (ot.dataRegisters[tmp]>>16)&0xFFFF;//OTDR.ID3.SlaveMemberID;
 		RPi_UART.transmitRequered = true;
 		break;

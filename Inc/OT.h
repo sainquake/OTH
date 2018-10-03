@@ -323,20 +323,20 @@ void OTRoute(void) {
 		}
 		ot.complete = true;
 	}
-//	if(ot.frameSendedAndStartWaitingACK && ot.timeout){
-//		ot.busy = false;
-//		ot.complete = false;
-//		ot.frameSendedAndStartWaitingACK = false;
-//		ot.readingResponse = false;
-//		ot.timeout = false;
-////		if (ot.index > RRLEN){
-////			ot.index = 0;
-////		}else{
-////			ot.index++;
-////		}
-////		HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_1);
-////		HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_2);
-//	}
+	if(ot.frameSendedAndStartWaitingACK && ot.timeout){
+		ot.busy = false;
+		ot.complete = false;
+		ot.frameSendedAndStartWaitingACK = false;
+		ot.readingResponse = false;
+		ot.timeout = false;
+//		if (ot.index > RRLEN){
+//			ot.index = 0;
+//		}else{
+//			ot.index++;
+//		}
+//		HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_1);
+//		HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_2);
+	}
 	if (ot.readingResponse && checkTimerOVF()) {
 		ot.readingResponse = false;
 
