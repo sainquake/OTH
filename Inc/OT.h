@@ -242,18 +242,22 @@ void OTRoute(void) {
 			requests[ot.index] = reqU.raw;//((0x90000000) | (((long) 1) << 16)) + OTCommon.targetTemp;
 		}*/
 		union OTFrameUnion reqU;
-		reqU.raw = ot.dataRegisters[readReq[ot.index]];
+		reqU.frame.DATA_ID = readReq[ot.index];
+		reqU.frame.MSG_TYPE = OT_MSG_TYPE_M_READ_DATA;
+		reqU.frame.DATA_VALUE = 0;
+		reqU.frame.PARITY = parityBit(reqU.raw);
+		//reqU.raw = ot.dataRegisters[readReq[ot.index]];
 
-							OTFrameStruct req1;
+							/*OTFrameStruct req1;
 							req1.DATA_ID = readReq[ot.index];
 							req1.MSG_TYPE = OT_MSG_TYPE_M_READ_DATA;
-							if(reqU.frame.MSG_TYPE == OT_MSG_TYPE_S_UNKNOWN_DATAID)
-								req1.PARITY = 1;
-							else
-								req1.PARITY = 0;
-							req1.DATA_VALUE = 0;
+							//if(reqU.frame.MSG_TYPE == OT_MSG_TYPE_S_UNKNOWN_DATAID)
+							//	req1.PARITY = 1;
+							//else
 
-							reqU.frame = req1;
+							req1.DATA_VALUE = 0;
+							req1.PARITY = parityBit();
+							reqU.frame = req1;*/
 							//requests[ot.index] = reqU.raw;
 
 		ot.tx.raw = reqU.raw;//requests[ot.index];
