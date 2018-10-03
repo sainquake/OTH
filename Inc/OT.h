@@ -219,6 +219,7 @@ bool checkACK(void);
 void startReadResponse(void);
 bool checkTimerOVF(void);
 uint32_t calculateResponse(void);
+bool parityBit(uint32_t d);
 //OT
 void OTRoute(void) {
 	if (!ot.busy) {
@@ -600,6 +601,13 @@ uint32_t checkParity(uint32_t val) {
 	val ^= val >> 2;
 	val ^= val >> 1;
 	return (val) & 1;
+}
+bool parityBit(uint32_t d){
+    uint8_t x = 0;
+    for(uint8_t i=1;i<31;i++)
+        if( ((d>>i)&1))
+            x++;
+    return x%2;
 }
 
 #endif /* OT_H_ */
