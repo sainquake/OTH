@@ -245,7 +245,7 @@ void HAL_SYSTICK_Callback(void) {
 #endif
 	if (HAL_GetTick() % 5000 == 0)
 		OWTick();
-	if (HAL_GetTick() % 300 == 0 && ot.complete) {
+	if ( (HAL_GetTick() % 300 == 0) && ot.complete && ot.granted) {
 		ot.complete = false;
 		ot.busy = false;
 	}
@@ -401,7 +401,8 @@ int main(void)
 		RPiRoute();
 #endif
 		routeADC();
-		OTRoute();
+		if(ot.granted)
+			OTRoute();
 		/*OWTransmit();//HAL_UART_Transmit(&huart2,&convert_T,16,5000);
 		 temp.TransmitReceive = false;
 		 // }else{

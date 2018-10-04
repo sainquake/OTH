@@ -16,6 +16,17 @@
 #define OT_QUEUE_LENGTH 18
 //OT defenititons
 #define OT_MSG_TYPE_SHIFT				28
+typedef enum {
+   OT_MSG_TYPE_M_READ_DATA,
+   OT_MSG_TYPE_M_WRITE_DATA,
+   OT_MSG_TYPE_M_INVALID_DATA,
+   OT_MSG_TYPE_M_RESERVED,
+   OT_MSG_TYPE_S_READ_ACK,
+   OT_MSG_TYPE_S_WRITE_ACK,
+   OT_MSG_TYPE_S_DATA_INVALID,
+   OT_MSG_TYPE_S_UNKNOWN_DATAID
+} OTMsgType;
+/*
 #define OT_MSG_TYPE_M_READ_DATA			0
 #define OT_MSG_TYPE_M_WRITE_DATA		1
 #define OT_MSG_TYPE_M_INVALID_DATA		2
@@ -24,9 +35,25 @@
 #define OT_MSG_TYPE_S_WRITE_ACK			5
 #define OT_MSG_TYPE_S_DATA_INVALID		6
 #define OT_MSG_TYPE_S_UNKNOWN_DATAID	7
-
+*/
 #define OT_DATA_ID_SHIFT		16
-#define OT_DATA_ID_Status						0	//R-
+typedef enum {
+    OTID_Status,                        //R-
+    OTID_TSet,                          //-W
+    OTID_MConfig,                       //-W
+    OTID_SConfig,                       //R-
+    OTID_Command,
+    OTID_ASFFlags_OEM_fault_code,
+    OTID_RBP_flags,
+    OTID_CoolingControl,
+    OTID_TsetCH2,
+    OTID_TrOverride,
+    OTID_TSP,
+    OTID_TSP_Index_Value,
+    OTID_FHB_Size
+
+} OTDataID;
+/*#define OT_DATA_ID_Status						0	//R-
 #define OT_DATA_ID_TSet							1	//-W
 #define OT_DATA_ID_MConfig_ID					2	//-W
 #define OT_DATA_ID_SConfig_ID					3	//R-
@@ -38,7 +65,7 @@
 #define OT_DATA_ID_FHBIndex_FHBValue			13	//R-
 #define OT_DATA_ID_DHWFlowRate					19	//R-
 #define OT_DATA_ID_TBoiler						25	//R-
-
+*/
 extern TIM_HandleTypeDef htim4;
 //extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
@@ -112,10 +139,11 @@ typedef struct {
 	bool complete;
 	bool frameSendedAndStartWaitingACK;
 	bool readingResponse;
+	bool granted;
 	uint32_t dataRegisters[128];
 	uint8_t index;
 } OT_Struct;
-OT_Struct ot;
+volatile OT_Struct ot;
 
 bool parity;
 bool ext = false;
@@ -349,6 +377,7 @@ void initOT(void) {
 	ot.readingResponse = false;
 	ot.timeout = false;
 	ot.index = 0;
+	ot.granted = true;
 	//OTCommon.busy = false;
 	OTCommon.targetTemp = 0;
 }

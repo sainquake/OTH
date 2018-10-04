@@ -150,14 +150,18 @@ void makeResponse(void) {
 		ot.RPiRequestHI = rpiframe.frame.data;
 		break;
 	case RPi_OT_UART_ADDRESS:
+		ot.granted = false;
 		tmp = (rpiframe.frame.address >> 8) & 0x7F;
 		rpiframe.frame.data = ot.dataRegisters[tmp]&0xFFFF;//OTDR.ID3.SlaveMemberID;
 		RPi_UART.transmitRequered = true;
+		ot.granted = true;
 		break;
 	case RPi_OT_HEADER_UART_ADDRESS:
+		ot.granted = false;
 		tmp = (rpiframe.frame.address >> 8) & 0x7F;
 		rpiframe.frame.data = (ot.dataRegisters[tmp]>>16)&0xFFFF;//OTDR.ID3.SlaveMemberID;
 		RPi_UART.transmitRequered = true;
+		ot.granted = true;
 		break;
 	case 4:
 
@@ -214,6 +218,7 @@ void makeResponse(void) {
 		//ot.RPiRequestHI = frame.frame.data;
 		break;
 	case RPi_OT_STATUS_UART_ADDRESS:
+		ot.granted = false;
 		if (subaddress == 0)
 			rpiframe.frame.data = ot.timeout;
 		if (subaddress == 1)
@@ -235,6 +240,7 @@ void makeResponse(void) {
 			(ot.index<<8);
 		}
 		RPi_UART.transmitRequered = true;
+		ot.granted = true;
 		break;
 	case RPi_MEM_UART_ADDRESS:
 
