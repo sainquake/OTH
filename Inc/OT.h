@@ -95,9 +95,9 @@ unsigned long requests[] = {
 		((0x80000000) | (((long) 127) << 16)),  //
 		};
 
-uint8_t readReq[] = {0,5,15,115, 3,125,127, 17,18,19,25,26,27,28,31,32,33,116,117,118,119,120,121,122,123, 15 };
-#define RRLEN 26
-
+uint8_t readReq[] = {0,3,5,33,17,25,26,28,116,19};//{0,5,15,115, 3,125,127, 17,18,19,25,26,27,28,31,32,33,116,117,118,119,120,121,122,123, 15 };
+#define RRLEN 10
+//1,8,16,23,24,
 typedef struct {
 	uint16_t targetTemp;
 	//int index;
@@ -140,6 +140,12 @@ typedef struct {
 	bool frameSendedAndStartWaitingACK;
 	bool readingResponse;
 	bool granted;
+	//
+	bool specialRequest;
+	union OTFrameUnion special_tx;
+	union OTFrameUnion special_rx;
+	bool specialRequestComplete;
+	//
 	uint32_t dataRegisters[128];
 	uint8_t index;
 } OT_Struct;
@@ -287,8 +293,8 @@ void OTRoute(void) {
 							req1.PARITY = parityBit();
 							reqU.frame = req1;*/
 							//requests[ot.index] = reqU.raw;
+		ot.tx.raw = (ot.specialRequest)?ot.special_tx.raw:reqU.raw;//requests[ot.index];
 
-		ot.tx.raw = reqU.raw;//requests[ot.index];
 		//ot.tx.raw = 0;
 		//ot.tx.frame.DATA_ID = req[index];
 		//ot.tx.frame.PARITY = checkParity( ot.tx.raw );
@@ -315,7 +321,8 @@ void OTRoute(void) {
 			ot.rx.raw = calculateResponse();
 			//ot.reg[ot.index] = ot.rx.raw;	//sendRequest( requests[ot.index] );
 			//ot.dataRegisters[ot.rx.frame.DATA_ID] = ot.rx.raw;
-
+			if(ot.specialRequest)
+				ot.special_rx.raw = ot.rx.raw;
 			if ( (ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_READ_ACK
 							|| ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_WRITE_ACK)) {
 
@@ -338,12 +345,16 @@ void OTRoute(void) {
 			}
 			//ot.rx.frame.MSG_TYPE;
 
-
-			if (ot.index > RRLEN){
-				ot.index = 0;
+			if(ot.specialRequest){
+				ot.specialRequest=false;
+				ot.specialRequestComplete=true;
 			}else{
-				ot.index++;
-				HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+				if (ot.index > RRLEN){
+					ot.index = 0;
+				}else{
+					ot.index++;
+					HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+				}
 			}
 			//OTCommon.busy = true;
 			// }
@@ -378,6 +389,8 @@ void initOT(void) {
 	ot.timeout = false;
 	ot.index = 0;
 	ot.granted = true;
+	ot.specialRequest = false;
+	ot.specialRequestComplete = false;
 	//OTCommon.busy = false;
 	OTCommon.targetTemp = 0;
 }
@@ -459,7 +472,7 @@ uint32_t sendRequest(uint32_t request) {
 	return readResponse();
 }
 volatile bool rised = false;
-volatile uint32_t risedCount;
+//volatile uint32_t risedCount;
 void startWaiting() {
 	rised = false;
 	ot.timeout = false;
@@ -504,7 +517,7 @@ bool waitForResponse() {
 volatile bool readResponseInProgress = false;
 volatile uint32_t ttime[64];
 volatile bool rf[64];
-volatile swIndex = 0;
+volatile int swIndex = 0;
 //uint32_t ddd=0;
 
 void startReadResponse(void) {

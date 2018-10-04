@@ -152,14 +152,22 @@ void makeResponse(void) {
 	case RPi_OT_UART_ADDRESS:
 		ot.granted = false;
 		tmp = (rpiframe.frame.address >> 8) & 0x7F;
-		rpiframe.frame.data = ot.dataRegisters[tmp]&0xFFFF;//OTDR.ID3.SlaveMemberID;
+		if((rpiframe.frame.address >> 15) & 1){
+			ot.special_tx.frame.DATA_VALUE = rpiframe.frame.data;
+			ot.special_tx.frame.DATA_ID = tmp;
+			ot.special_tx.frame.MSG_TYPE = OT_MSG_TYPE_M_WRITE_DATA;
+			ot.special_tx.frame.PARITY = parityBit(ot.special_tx.raw);
+			ot.specialRequest = true;
+			ot.specialRequestComplete = false;
+		}
+		rpiframe.frame.data = ot.dataRegisters[tmp] & 0xFFFF;//OTDR.ID3.SlaveMemberID;
 		RPi_UART.transmitRequered = true;
 		ot.granted = true;
 		break;
 	case RPi_OT_HEADER_UART_ADDRESS:
 		ot.granted = false;
 		tmp = (rpiframe.frame.address >> 8) & 0x7F;
-		rpiframe.frame.data = (ot.dataRegisters[tmp]>>16)&0xFFFF;//OTDR.ID3.SlaveMemberID;
+		rpiframe.frame.data = (ot.dataRegisters[tmp] >> 16) & 0xFFFF;//OTDR.ID3.SlaveMemberID;
 		RPi_UART.transmitRequered = true;
 		ot.granted = true;
 		break;
@@ -231,13 +239,15 @@ void makeResponse(void) {
 			rpiframe.frame.data = ot.frameSendedAndStartWaitingACK;
 		if (subaddress == 5)
 			rpiframe.frame.data = ot.readingResponse;
-		if (subaddress == 6){
-			rpiframe.frame.data = (ot.timeout) +
-			(ot.busy<<1) +
-			(ot.complete<<2)+
-			(ot.frameSendedAndStartWaitingACK<<3)+
-			(ot.readingResponse<<4)+
-			(ot.index<<8);
+		if (subaddress == 6) {
+			rpiframe.frame.data = (ot.timeout)
+					+ (ot.busy << 1)
+					+ (ot.complete << 2)
+					+ (ot.frameSendedAndStartWaitingACK << 3)
+					+ (ot.readingResponse << 4)
+					+ (ot.specialRequest <<5)
+					+ (ot.specialRequestComplete <<6)
+					+ (ot.index << 8);
 		}
 		RPi_UART.transmitRequered = true;
 		ot.granted = true;
@@ -269,14 +279,14 @@ void makeResponse(void) {
 	}
 
 	/*if (RPi_UART.rx_buff[0] == 'H' && RPi_UART.rx_buff[1] == 'e'
-			&& RPi_UART.rx_buff[2] == 'l') {
-		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-	}
-	if (RPi_UART.rx_buff[0] == 't' && RPi_UART.rx_buff[1] == 'm'
-			&& RPi_UART.rx_buff[2] == 'p') {
-		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-		//RPi_UART.tx_buff
-	}*/
+	 && RPi_UART.rx_buff[2] == 'l') {
+	 HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+	 }
+	 if (RPi_UART.rx_buff[0] == 't' && RPi_UART.rx_buff[1] == 'm'
+	 && RPi_UART.rx_buff[2] == 'p') {
+	 HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+	 //RPi_UART.tx_buff
+	 }*/
 
 	for (int i = 0; i < RPI_BUFFER_SIZE; i++)
 		RPi_UART.tx_buff[i] = rpiframe.raw[i];
