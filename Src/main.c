@@ -72,7 +72,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 
 /* USER CODE BEGIN PV */
 //#define NO_RPI
-#define NO_GSM
+//#define NO_GSM
 //#define NO_OT
 
 //#define OT_ONLY

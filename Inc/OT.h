@@ -139,6 +139,7 @@ typedef struct {
 	bool complete;
 	bool frameSendedAndStartWaitingACK;
 	bool readingResponse;
+	uint8_t noResponseCount;
 	bool granted;
 	//
 	bool specialRequest;
@@ -275,6 +276,7 @@ void OTRoute(void) {
 			reqU.frame = req1;
 			requests[ot.index] = reqU.raw;//((0x90000000) | (((long) 1) << 16)) + OTCommon.targetTemp;
 		}*/
+		ot.noResponseCount ++;
 		union OTFrameUnion reqU;
 		reqU.frame.DATA_ID = readReq[ot.index];
 		reqU.frame.MSG_TYPE = OT_MSG_TYPE_M_READ_DATA;
@@ -325,7 +327,7 @@ void OTRoute(void) {
 				ot.special_rx.raw = ot.rx.raw;
 			if ( (ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_READ_ACK
 							|| ot.rx.frame.MSG_TYPE == OT_MSG_TYPE_S_WRITE_ACK)) {
-
+				ot.noResponseCount=0;
 				ot.dataRegisters[ot.rx.frame.DATA_ID] = ot.rx.raw;
 				dv.raw = ot.rx.frame.DATA_VALUE;
 				if (ot.rx.frame.DATA_ID == 0) {
@@ -391,6 +393,7 @@ void initOT(void) {
 	ot.granted = true;
 	ot.specialRequest = false;
 	ot.specialRequestComplete = false;
+	ot.noResponseCount = 0;
 	//OTCommon.busy = false;
 	OTCommon.targetTemp = 0;
 }

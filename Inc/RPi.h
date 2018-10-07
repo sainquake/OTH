@@ -247,6 +247,7 @@ void makeResponse(void) {
 					+ (ot.readingResponse << 4)
 					+ (ot.specialRequest <<5)
 					+ (ot.specialRequestComplete <<6)
+					+ ((ot.noResponseCount>5)<<7)
 					+ (ot.index << 8);
 		}
 		RPi_UART.transmitRequered = true;
