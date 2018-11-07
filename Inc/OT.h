@@ -256,6 +256,25 @@ bool checkTimerOVF(void);
 uint32_t calculateResponse(void);
 bool parityBit(uint32_t d);
 //OT
+void OTRequest(OTMsgType type_,uint8_t id_, uint16_t value_){
+	//ot.complete && ot.granted
+	ot.special_tx.frame.DATA_VALUE = value_;
+	ot.special_tx.frame.DATA_ID = id_;
+	ot.special_tx.frame.MSG_TYPE = type_;
+	ot.special_tx.frame.PARITY = parityBit(ot.special_tx.raw);
+	ot.specialRequest = true;
+	ot.specialRequestComplete = false;
+
+	ot.complete = false;
+	ot.busy = false;
+	ot.timeout = false;
+}
+union OTFrameUnion OTResponse(void){
+	return ot.special_rx;
+}
+bool OTRequestComplete(void){
+	return ot.specialRequestComplete;
+}
 void OTRoute(void) {
 	if (!ot.busy) {
 		ot.busy = true;
@@ -350,6 +369,7 @@ void OTRoute(void) {
 			if(ot.specialRequest){
 				ot.specialRequest=false;
 				ot.specialRequestComplete=true;
+				HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 			}else{
 				if (ot.index > RRLEN){
 					ot.index = 0;
@@ -384,7 +404,7 @@ void OTRoute(void) {
 	}
 }
 void initOT(void) {
-	ot.busy = false;
+	ot.busy = true;
 	ot.complete = false;
 	ot.frameSendedAndStartWaitingACK = false;
 	ot.readingResponse = false;

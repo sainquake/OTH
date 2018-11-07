@@ -29,7 +29,12 @@ extern UART_HandleTypeDef huart3;
 #define RPi_OT_STATUS_UART_ADDRESS		7
 #define RPi_MEM_UART_ADDRESS			8
 #define RPi_SMS_UART_ADDRESS			9
+
 #define RPi_OT_HEADER_UART_ADDRESS		32
+#define RPi_OT_REQUEST_ADDRESS			33
+#define RPi_OT_COMPLETE_ADDRESS			34
+#define RPi_OT_RESPONSE_ADDRESS			35
+#define RPi_OT_ACTIVATE_ADDRESS			36
 //#define RPi
 
 #define RPi_SET_TEMP_UART_ADDRESS       10
@@ -150,19 +155,23 @@ void makeResponse(void) {
 		ot.RPiRequestHI = rpiframe.frame.data;
 		break;
 	case RPi_OT_UART_ADDRESS:
-		ot.granted = false;
+		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+		//ot.granted = false;
 		tmp = (rpiframe.frame.address >> 8) & 0x7F;
-		if((rpiframe.frame.address >> 15) & 1){
-			ot.special_tx.frame.DATA_VALUE = rpiframe.frame.data;
-			ot.special_tx.frame.DATA_ID = tmp;
-			ot.special_tx.frame.MSG_TYPE = OT_MSG_TYPE_M_WRITE_DATA;
-			ot.special_tx.frame.PARITY = parityBit(ot.special_tx.raw);
-			ot.specialRequest = true;
-			ot.specialRequestComplete = false;
-		}
+		//if((rpiframe.frame.address >> 15) & 1){
+		ot.special_tx.frame.DATA_VALUE = rpiframe.frame.data;
+		ot.special_tx.frame.DATA_ID = tmp;
+		ot.special_tx.frame.MSG_TYPE = (rpiframe.frame.address >> 15) & 1;
+		ot.special_tx.frame.PARITY = parityBit(ot.special_tx.raw);
+		ot.specialRequest = true;
+		ot.specialRequestComplete = false;
+
+		ot.complete = false;
+		ot.busy = false;
+		//}
 		rpiframe.frame.data = ot.dataRegisters[tmp] & 0xFFFF;//OTDR.ID3.SlaveMemberID;
 		RPi_UART.transmitRequered = true;
-		ot.granted = true;
+		//ot.granted = true;
 		break;
 	case RPi_OT_HEADER_UART_ADDRESS:
 		ot.granted = false;
@@ -170,6 +179,28 @@ void makeResponse(void) {
 		rpiframe.frame.data = (ot.dataRegisters[tmp] >> 16) & 0xFFFF;//OTDR.ID3.SlaveMemberID;
 		RPi_UART.transmitRequered = true;
 		ot.granted = true;
+		break;
+	case RPi_OT_REQUEST_ADDRESS:
+		tmp = (rpiframe.frame.address >> 8) & 0x7F;
+		OTRequest((rpiframe.frame.address >> 15) & 1,tmp,rpiframe.frame.data);
+		rpiframe.frame.data = ot.dataRegisters[tmp] & 0xFFFF;
+		RPi_UART.transmitRequered = true;
+		break;
+	case RPi_OT_COMPLETE_ADDRESS:
+		rpiframe.frame.data = OTRequestComplete();
+		RPi_UART.transmitRequered = true;
+		break;
+	case RPi_OT_RESPONSE_ADDRESS:
+		tmp = (rpiframe.frame.address >> 8) & 0x7F;
+		if(tmp==0)
+			rpiframe.frame.data = (OTResponse().raw>>16)&0xFFFF;
+		else
+			rpiframe.frame.data = (OTResponse().raw)&0xFFFF;
+		RPi_UART.transmitRequered = true;
+		break;
+	case RPi_OT_ACTIVATE_ADDRESS:
+		activateBoiler();
+		RPi_UART.transmitRequered = true;
 		break;
 	case 4:
 
@@ -240,15 +271,16 @@ void makeResponse(void) {
 		if (subaddress == 5)
 			rpiframe.frame.data = ot.readingResponse;
 		if (subaddress == 6) {
-			rpiframe.frame.data = (ot.timeout)
-					+ (ot.busy << 1)
+			rpiframe.frame.data = (ot.timeout) + (ot.busy << 1)
 					+ (ot.complete << 2)
 					+ (ot.frameSendedAndStartWaitingACK << 3)
-					+ (ot.readingResponse << 4)
-					+ (ot.specialRequest <<5)
-					+ (ot.specialRequestComplete <<6)
-					+ ((ot.noResponseCount>5)<<7)
-					+ (ot.index << 8);
+					+ (ot.readingResponse << 4) + (ot.specialRequest << 5)
+					+ (ot.specialRequestComplete << 6)
+					+ ((ot.noResponseCount > 5) << 7) + (ot.index << 8);
+		}
+		if (subaddress == 7) {
+			initOT();
+			activateBoiler();
 		}
 		RPi_UART.transmitRequered = true;
 		ot.granted = true;

@@ -251,11 +251,20 @@ void HAL_SYSTICK_Callback(void) {
 	if (HAL_GetTick() % 5000 == 0)
 		OWTick();
 #ifndef NO_OT
-	if ((HAL_GetTick() % 300 == 0) && ot.complete && ot.granted) {
+	/*if ((HAL_GetTick() % 300 == 0) && ot.complete && ot.granted) {
 		ot.complete = false;
 		ot.busy = false;
-	}
+	}*/
 #endif
+
+	/*if (HAL_GetTick() % 2000 == 0){
+		//OTRequest(OT_MSG_TYPE_M_READ_DATA,OTID_SConfig,0);
+		if(!OTRequestComplete())
+			OTRequest(OT_MSG_TYPE_M_READ_DATA,OTID_SConfig,0);
+		else
+			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+	}*/
+
 }
 /* USER CODE END 0 */
 
@@ -409,7 +418,7 @@ int main(void) {
 #endif
 		routeADC();
 #ifndef NO_OT
-		//if (ot.granted)
+		if (ot.granted)
 			OTRoute();
 #endif
 		/*OWTransmit();//HAL_UART_Transmit(&huart2,&convert_T,16,5000);
