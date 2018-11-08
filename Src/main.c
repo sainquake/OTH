@@ -257,13 +257,16 @@ void HAL_SYSTICK_Callback(void) {
 	}*/
 #endif
 
-	/*if (HAL_GetTick() % 2000 == 0){
+	if (HAL_GetTick() % 2000 == 0){
+		//gprs.specificRequest = true;
+		//gprs.subds = 0;
+
 		//OTRequest(OT_MSG_TYPE_M_READ_DATA,OTID_SConfig,0);
-		if(!OTRequestComplete())
+		/*if(!OTRequestComplete())
 			OTRequest(OT_MSG_TYPE_M_READ_DATA,OTID_SConfig,0);
 		else
-			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-	}*/
+			HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);*/
+	}
 
 }
 /* USER CODE END 0 */

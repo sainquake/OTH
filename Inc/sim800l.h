@@ -269,9 +269,9 @@ void initAT() {
 	queue[2] = AT_CPIN;
 	queue[3] = AT_CMGF;
 	queue[4] = AT_CBC;
-	queue[5] = AT_CSPN;
-	queue[6] = AT_CPMS;
-	queue[7] = AT_CMGR;
+	//queue[5] = AT_CSPN;
+	queue[5] = AT_CPMS;
+	queue[6] = AT_CMGR;
 
 	HAL_UART_Receive_DMA(&huart1, gprs.rx_buff, RX_BUFFER_SIZE);
 }
@@ -476,7 +476,7 @@ void checkAT() {
 			gprs.i = 0;
 			gprs.busy = false;
 			gprs.index++;
-			if (gprs.index == 8)
+			if (gprs.index == 6)
 				gprs.index = 0;
 		}
 	}
